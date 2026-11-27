@@ -3,7 +3,6 @@ using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Threading;
 using OverTranslate.Models;
 using OverTranslate.Services;
 using OverTranslate.Services.Realtime;
@@ -22,12 +21,13 @@ namespace OverTranslate.Views.Realtime;
 /// opens on, are on the floating bar, where the blocks are — see
 /// <see cref="RealtimeSessionController.SaveFraming"/>. The rows are not controls: a row that picked
 /// itself on a click also turned the page's capture source, and the two lists then disagreed about
-/// what "selected" meant. Here a preset is only renamed (✎, <see cref="RealtimeFramingEditOverlay"/>)
-/// or deleted (🗑), undoably.</para>
+/// what "selected" meant. Here a preset is only renamed (✎)
+/// or deleted (🗑, asked first). Both open over the window from <see cref="RealtimeFramingOverlay"/>.</para>
 ///
 /// <para>The upper half follows 步驟 1／2 (<see cref="SetTarget"/>): named by the target, so 選用中
 /// says whom it is chosen for, and swapped with a short fade when the choice changes while the lower
-/// half stays where it is. See <see cref="RealtimeFramingStore.GroupFor"/> for the split.</para>
+/// half stays where it is. Past three presets it folds as the 模式 card's custom list does, with the
+/// one in use first. See <see cref="RealtimeFramingStore.GroupFor"/> for the split.</para>
 ///
 /// <para>Renaming and deleting stay open while translating: they only touch the file, and a session
 /// already running keeps the blocks it opened with.</para>
@@ -36,9 +36,6 @@ public partial class RealtimeFramingCard : UserControl
 {
     // How tall a row's picture is drawn, in DIP.
     private const double ThumbnailHeight = 30;
-
-    // How long the line a deletion leaves stays up, unless the pointer is on it.
-    private static readonly TimeSpan UndoShown = TimeSpan.FromSeconds(5);
 
     private static readonly Duration TurnDuration = new(TimeSpan.FromMilliseconds(180));
     private static readonly Duration FadeDuration = new(TimeSpan.FromMilliseconds(150));
@@ -49,21 +46,20 @@ public partial class RealtimeFramingCard : UserControl
     // Whether 其他螢幕或視窗 is open. Not kept: leaving the page and coming back closes it.
     private bool _othersOpen;
 
-    // The deletion 復原 would take back, while its line is up.
-    private RealtimeFramingStore.Forgotten? _undo;
-    private readonly DispatcherTimer _undoTimer = new() { Interval = UndoShown };
+    // Whether the chosen target's own list is unfolded. Not kept either, and folded again when
+    // 步驟 1／2 turns to another target.
+    private bool _currentExpanded;
 
     public RealtimeFramingCard()
     {
         InitializeComponent();
         LocalizationService.LanguageChanged += OnChanged;
         SettingsService.Instance.RealtimeFramingChanged += OnChanged;
-        _undoTimer.Tick += (_, _) => HideUndo();
         Unloaded += (_, _) =>
         {
-            HideUndo();
-            if (!_othersOpen) return;
+            if (!_othersOpen && !_currentExpanded) return;
             _othersOpen = false;
+            _currentExpanded = false;
             Render();
         };
         Render();
@@ -82,6 +78,7 @@ public partial class RealtimeFramingCard : UserControl
 
         bool another = _target?.Key != target?.Key || _target?.WindowTitle != target?.WindowTitle;
         _target = target;
+        if (another) _currentExpanded = false;
         Render();
         if (another) FadeInCurrent();
     }
@@ -91,7 +88,6 @@ public partial class RealtimeFramingCard : UserControl
     {
         LocalizationService.LanguageChanged -= OnChanged;
         SettingsService.Instance.RealtimeFramingChanged -= OnChanged;
-        _undoTimer.Stop();
     }
 
     private void OnChanged(object? sender, EventArgs e) => Render();
@@ -113,7 +109,15 @@ public partial class RealtimeFramingCard : UserControl
         CurrentCaption.Visibility = hasTarget ? Visibility.Visible : Visibility.Collapsed;
         CurrentCaption.Text = _target is { } target ? RealtimeFramingDisplay.Caption(target) : "";
 
-        Fill(ListHost, groups.Current.Select(preset => Row(preset, preset.Id == groups.OpensOn?.Id, other: false)));
+        // Past three, folded: the one in use is already first (GroupFor), so it is always in view.
+        var (shown, hidden) = CollapsibleRows.Shown(groups.Current.Count, null, _currentExpanded);
+        Fill(ListHost, shown.Select(index => groups.Current[index])
+            .Select(preset => Row(preset, preset.Id == groups.OpensOn?.Id, other: false)));
+        if (CollapsibleRows.HasMoreRow(groups.Current.Count, hidden, _currentExpanded))
+        {
+            ListHost.Children.Add(CollapsibleRows.MoreRow(hidden, _currentExpanded, "S.Realtime.ShowMoreFramings",
+                "FramingPresetMore", () => { _currentExpanded = !_currentExpanded; Render(); }));
+        }
         ListBorder.Visibility = groups.Current.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         EmptyBox.Visibility = groups.Current.Count > 0 ? Visibility.Collapsed : Visibility.Visible;
 
@@ -122,7 +126,7 @@ public partial class RealtimeFramingCard : UserControl
 
         // The lower half: one row for every other target's presets, open or not.
         OthersPanel.Visibility = groups.Others.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        OthersPanel.Margin = new Thickness(0, CurrentPanel.Visibility == Visibility.Visible ? 14 : 0, 0, 0);
+        OthersPanel.Margin = new Thickness(0, CurrentPanel.Visibility == Visibility.Visible ? 10 : 0, 0, 0);
         OthersCount.Text = LocalizationService.Format("S.Realtime.FramingOthersCount", groups.Others.Count);
         AutomationProperties.SetName(OthersToggle,
             $"{LocalizationService.Get("S.Realtime.FramingOthers")} {OthersCount.Text}");
@@ -131,11 +135,11 @@ public partial class RealtimeFramingCard : UserControl
         bool open = _othersOpen && groups.Others.Count > 0;
         Fill(OthersHost, open ? groups.Others.Select(preset => Row(preset, inUse: false, other: true)) : []);
         OthersListBorder.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-        OthersToggle.Tag = open ? new CornerRadius(10, 10, 0, 0) : new CornerRadius(10);
         Turn(open, animate: false);
     }
 
     /// <summary>Puts <paramref name="rows"/> in <paramref name="host"/>, the last without its rule.</summary>
+    /// <remarks>Before the 顯示其餘 row is added, which brings its own rule.</remarks>
     private static void Fill(StackPanel host, IEnumerable<Border> rows)
     {
         host.Children.Clear();
@@ -215,7 +219,7 @@ public partial class RealtimeFramingCard : UserControl
         edit.Click += (_, _) => (Window.GetWindow(this) as Shell.ShellWindow)?.OpenRealtimeFramingEdit(id);
         var delete = IconButton("FramingDeleteGlyph", "S.Realtime.FramingDelete", "FramingDelete_" + id);
         delete.Margin = new Thickness(2, 0, 0, 0);
-        delete.Click += (_, _) => Delete(id);
+        delete.Click += (_, _) => (Window.GetWindow(this) as Shell.ShellWindow)?.OpenRealtimeFramingDelete(id);
 
         var grid = new Grid();
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -316,81 +320,13 @@ public partial class RealtimeFramingCard : UserControl
         CurrentPanel.BeginAnimation(OpacityProperty, fade);
     }
 
-    // ── 刪除 and 復原 ─────────────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Deletes a preset at once, and leaves a line to take it back: a question before every delete
-    /// is more than one preset is worth, and a delete with no way back loses a layout drawn by hand.
-    /// </summary>
-    private void Delete(string id)
-    {
-        var before = Groups();
-        bool wasInUse = before.OpensOn?.Id == id;
-        if (RealtimeFramingStore.ForId(id) is not { } preset) return;
-
-        var removed = RealtimeFramingStore.ForgetUndoably(id);
-        if (removed is null) return;
-
-        var message = LocalizationService.Format("S.Realtime.FramingDeleted", RealtimeFramingDisplay.MessageName(preset));
-        if (wasInUse && Groups().OpensOn is { } next)
-            message += LocalizationService.Format("S.Realtime.FramingDeletedNext", RealtimeFramingDisplay.MessageName(next));
-
-        _undo = removed;
-        UndoText.Text = message;
-        UndoText.ToolTip = message;
-        UndoBar.Visibility = Visibility.Visible;
-        if (SystemParameters.ClientAreaAnimation)
-        {
-            var fade = new DoubleAnimation { From = 0, To = 1, Duration = FadeDuration };
-            fade.Completed += (_, _) =>
-            {
-                UndoBar.BeginAnimation(OpacityProperty, null);
-                UndoBar.Opacity = 1;
-            };
-            UndoBar.BeginAnimation(OpacityProperty, fade);
-        }
-
-        _undoTimer.Stop();
-        _undoTimer.Start();
-    }
-
-    private void UndoButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (_undo is { } removed) RealtimeFramingStore.Restore(removed);
-        HideUndo();
-    }
-
-    private void HideUndo()
-    {
-        _undoTimer.Stop();
-        _undo = null;
-        UndoBar.Visibility = Visibility.Collapsed;
-    }
-
-    // The line stays while it is being read or reached for, and counts its seconds again after.
-    private void UndoBar_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e) => _undoTimer.Stop();
-
-    private void UndoBar_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
-    {
-        if (_undo is not null) _undoTimer.Start();
-    }
-
     // ── Clipping ────────────────────────────────────────────────────────────────────────────
 
     // Round the list to the inside of its border, so nothing inside it squares off the corners.
     private void ListBorder_SizeChanged(object sender, SizeChangedEventArgs e) =>
         ListBorder.Clip = new RectangleGeometry(new Rect(new Point(0, 0), e.NewSize), 9, 9);
 
-    // The list under 其他螢幕或視窗 is rounded at the bottom only: its top meets the row above.
-    private void OthersListBorder_SizeChanged(object sender, SizeChangedEventArgs e)
-    {
-        double w = e.NewSize.Width, h = e.NewSize.Height, r = 9;
-        var figure = new PathFigure { StartPoint = new Point(0, 0), IsClosed = true };
-        figure.Segments.Add(new LineSegment(new Point(w, 0), false));
-        figure.Segments.Add(new LineSegment(new Point(w, Math.Max(0, h - r)), false));
-        figure.Segments.Add(new ArcSegment(new Point(Math.Max(0, w - r), h), new System.Windows.Size(r, r), 0, false, SweepDirection.Clockwise, false));
-        figure.Segments.Add(new LineSegment(new Point(r, h), false));
-        figure.Segments.Add(new ArcSegment(new Point(0, Math.Max(0, h - r)), new System.Windows.Size(r, r), 0, false, SweepDirection.Clockwise, false));
-        OthersListBorder.Clip = new PathGeometry { Figures = { figure } };
-    }
+    // Round the list under 其他螢幕或視窗 the same way.
+    private void OthersListBorder_SizeChanged(object sender, SizeChangedEventArgs e) =>
+        OthersListBorder.Clip = new RectangleGeometry(new Rect(new Point(0, 0), e.NewSize), 9, 9);
 }

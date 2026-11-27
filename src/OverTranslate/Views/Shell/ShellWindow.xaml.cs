@@ -257,7 +257,10 @@ public partial class ShellWindow : Window
     public void OpenNewRealtimeProfile() => RealtimeProfiles.OpenNew();
 
     /// <summary>Opens 編輯翻譯區域預設 on one kept framing, from the 即時翻譯 page's card.</summary>
-    public void OpenRealtimeFramingEdit(string presetId) => RealtimeFramingEdit.Open(presetId);
+    public void OpenRealtimeFramingEdit(string presetId) => RealtimeFramings.OpenEdit(presetId);
+
+    /// <summary>Asks before deleting one kept framing, from the 即時翻譯 page's card.</summary>
+    public void OpenRealtimeFramingDelete(string presetId) => RealtimeFramings.OpenDelete(presetId);
 
     public void RefreshHotkeyHints()
     {

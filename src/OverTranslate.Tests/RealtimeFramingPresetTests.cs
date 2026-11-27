@@ -323,7 +323,7 @@ public class RealtimeFramingPresetTests
     [Fact]
     public void AScreen_MatchesItsOwnDeviceAndRectangleOnly()
     {
-        var presets = new[] { Make("a") };
+        var presets = new[] { Make("a", selected: true) };
         var target = ScreenTarget();
 
         Assert.Same(presets[0], RealtimeFramingStore.Match(presets, target));
@@ -375,31 +375,42 @@ public class RealtimeFramingPresetTests
 
         Assert.Equal("older", RealtimeFramingStore.Match([newer, older], target)!.Id);
 
-        // Nothing selected: the newest is the answer, which is what a target with one preset has too.
-        Assert.Equal("newer", RealtimeFramingStore.Match([newer, Make("older")], target)!.Id);
+        // Nothing selected: nothing is the answer — the newer one is not chosen for the user.
+        Assert.Null(RealtimeFramingStore.Match([newer, Make("older")], target));
     }
 
     [Fact]
-    public void AWindow_MatchesItsTitle_ThenItsSelectedPreset()
+    public void AWindow_OpensOnItsSelectedPreset_WhateverTheTitle_AndOnNoneWithoutOne()
     {
         var video = Make("video", mode: RealtimeCaptureMode.Window, process: "browser", title: "Video",
             savedAt: new DateTime(2026, 2, 1));
         var chat = Make("chat", mode: RealtimeCaptureMode.Window, process: "browser", title: "Chat",
-            savedAt: new DateTime(2026, 1, 1));
+            savedAt: new DateTime(2026, 1, 1), selected: true);
         var presets = new[] { video, chat };
         var target = WindowTarget("browser", "Video");
 
-        // The title decides: this is the Video window, whatever was selected.
-        Assert.Equal("video", RealtimeFramingStore.Match(presets, target)!.Id);
-        Assert.Equal("chat", RealtimeFramingStore.Match(presets, target with { WindowTitle = "Chat" })!.Id);
-
-        // The title matches neither: the user's own pick speaks for the application.
-        chat.Selected = true;
+        // The user's pick for the application, under any title: a preset saved under the window's
+        // title is not taken in its place.
+        Assert.Equal("chat", RealtimeFramingStore.Match(presets, target)!.Id);
         Assert.Equal("chat", RealtimeFramingStore.Match(presets, target with { WindowTitle = "Something" })!.Id);
 
-        // No pick either, and two windows' titles: there is no telling which was meant.
+        // No pick: not the one under the window's own title either.
         chat.Selected = false;
-        Assert.Null(RealtimeFramingStore.Match(presets, target with { WindowTitle = "Something" }));
+        Assert.Null(RealtimeFramingStore.Match(presets, target));
+    }
+
+    [Fact]
+    public void TwoSelectedOfOneApplication_ThePresetUnderTheWindowsTitleIsTaken()
+    {
+        // A kept executable that moved makes two keys one target (see SameProgram): each may keep its
+        // own selection, and the window's title decides between them.
+        var gone = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ot-gone-" + Guid.NewGuid().ToString("N"), "Game.exe");
+        using var now = new TempExe();
+        var old = Make("old", mode: RealtimeCaptureMode.Window, process: "Game", title: "Chapter 1", path: gone, selected: true);
+        var current = Make("current", mode: RealtimeCaptureMode.Window, process: "Game", title: "Chapter 2", path: now.Path, selected: true);
+
+        Assert.Equal("current", RealtimeFramingStore.Match([old, current], WindowTarget("Game", "Chapter 2", path: now.Path))!.Id);
+        Assert.Equal("old", RealtimeFramingStore.Match([old, current], WindowTarget("Game", "Chapter 1", path: now.Path))!.Id);
     }
 
     [Fact]
@@ -408,7 +419,7 @@ public class RealtimeFramingPresetTests
         // A window preset belongs to its application and size, not to a monitor or a position: its
         // blocks are relative, so the window can be moved anywhere and still get them.
         var preset = Make("game", mode: RealtimeCaptureMode.Window, process: "game", title: "Game",
-            windowSize: new Size(1280, 720));
+            windowSize: new Size(1280, 720), selected: true);
         var moved = WindowTarget("game", "Game", new Rectangle(600, 700, 1280, 720));
         var elsewhere = WindowTarget("game", "Game", new Rectangle(100, 200, 1280, 720)) with
         {
@@ -424,7 +435,7 @@ public class RealtimeFramingPresetTests
     public void AWindowOfAnotherSize_IsAnotherTarget()
     {
         var preset = Make("game", mode: RealtimeCaptureMode.Window, process: "game", title: "Game",
-            windowSize: new Size(1280, 720));
+            windowSize: new Size(1280, 720), selected: true);
         var target = WindowTarget("game", "Game", new Rectangle(100, 200, 1600, 900));
 
         Assert.Null(RealtimeFramingStore.Match([preset], target));
@@ -455,20 +466,22 @@ public class RealtimeFramingPresetTests
     }
 
     [Fact]
-    public void ARetitledWindow_KeepsItsOnlyTitle()
+    public void ARetitledWindow_StillOpensOnItsSelectedPreset_AndOnNoneWithoutOne()
     {
-        // A browser retitles itself as it plays. One title among this target's presets can only be
-        // that window, so its layout is offered even though the title no longer matches. The list is
-        // newest first, as the settings file holds it.
+        // A browser retitles itself as it plays: the title is not part of the target, so the
+        // selected preset still answers. Without one, nothing is chosen for the user.
         var presets = new[]
         {
             Make("two", mode: RealtimeCaptureMode.Window, process: "browser", title: "Video — 1",
                 savedAt: new DateTime(2026, 2, 1)),
-            Make("one", mode: RealtimeCaptureMode.Window, process: "browser", title: "Video — 1"),
+            Make("one", mode: RealtimeCaptureMode.Window, process: "browser", title: "Video — 1", selected: true),
         };
         var target = WindowTarget("browser", "Video — 2");
 
-        Assert.Equal("two", RealtimeFramingStore.Match(presets, target)!.Id);
+        Assert.Equal("one", RealtimeFramingStore.Match(presets, target)!.Id);
+
+        presets[1].Selected = false;
+        Assert.Null(RealtimeFramingStore.Match(presets, target));
     }
 
     [Fact]
@@ -484,7 +497,7 @@ public class RealtimeFramingPresetTests
     [Fact]
     public void AScreenAtAnotherResolution_SaysWhichSizeItWants()
     {
-        var preset = Make("a", screen: new Rectangle(0, 0, 1920, 1080));
+        var preset = Make("a", screen: new Rectangle(0, 0, 1920, 1080), selected: true);
         var target = ScreenTarget() with { Screen = new Rectangle(0, 0, 2560, 1440) };
 
         Assert.Null(RealtimeFramingStore.Match([preset], target));
@@ -604,7 +617,7 @@ public class RealtimeFramingPresetTests
         // of it is on the right one — the session's screen — and its left edge is still on the left.
         var right = new Rectangle(1920, 0, 1920, 1080);
         var preset = Make("game", mode: RealtimeCaptureMode.Window, process: "game", title: "Game",
-            windowSize: new Size(1280, 720), blocks: new Rectangle(100, 600, 400, 60));
+            windowSize: new Size(1280, 720), selected: true, blocks: new Rectangle(100, 600, 400, 60));
         var straddling = WindowTarget(bounds: new Rectangle(1700, 200, 1280, 720)) with
         {
             Screen = right,
@@ -869,41 +882,59 @@ public class RealtimeFramingPresetTests
 
     // ── The name a preset is listed under ─────────────────────────────────────────────────────
 
-    [Fact]
-    public void AWindowKeepsItsTitleAsItsDefaultName_AndThePageCanGiveItAnother()
+    [Theory]
+    [InlineData(RealtimeCaptureMode.Window, 1)]
+    [InlineData(RealtimeCaptureMode.Window, 3)]
+    [InlineData(RealtimeCaptureMode.Screen, 2)]
+    public void APresetWithoutAName_IsCalledPresetN_ByItsNumber_WhateverItsTarget(RealtimeCaptureMode mode, int ordinal)
     {
-        var preset = Make("a", mode: RealtimeCaptureMode.Window, process: "game", title: "Game — Chapter 1");
+        var preset = Make("a", mode: mode, process: "game", title: "Game — Chapter 1", ordinal: ordinal);
+        var expected = LocalizationService.Format("S.Realtime.FramingAutoName", ordinal);
 
-        // The box shows the title; leaving it as it is stores no name of the user's own, so the
-        // default goes on following the window.
-        Assert.Equal("Game — Chapter 1", RealtimeFramingDisplay.Name(preset));
-        Assert.Equal("", RealtimeFramingDisplay.StoredName(preset, "  Game — Chapter 1 "));
+        // The same name on the page's card, the bar's list and every message on the bar.
+        Assert.Equal(expected, RealtimeFramingDisplay.Name(preset));
+        Assert.Contains(ordinal.ToString(), expected);
+        Assert.DoesNotContain("Game", expected);
+        Assert.True(RealtimeFramingDisplay.IsAutomaticallyNamed(preset));
+    }
 
-        // Anything else is the user's choice and kept as typed.
+    [Fact]
+    public void ALegacyPresetWithoutANumber_IsCalledPreset1()
+    {
+        Assert.Equal(LocalizationService.Format("S.Realtime.FramingAutoName", 1),
+            RealtimeFramingDisplay.Name(Make("a", ordinal: 0)));
+    }
+
+    [Fact]
+    public void TheEditBox_TheAutomaticNameOrNothing_StoresNoName_AnythingElseIsKept()
+    {
+        var preset = Make("a", mode: RealtimeCaptureMode.Window, process: "game", title: "Game", ordinal: 2);
+        var automatic = RealtimeFramingDisplay.Name(preset);
+
+        Assert.Equal("", RealtimeFramingDisplay.StoredName(preset, $"  {automatic} "));
+        Assert.Equal("", RealtimeFramingDisplay.StoredName(preset, "   "));
         Assert.Equal("第一章", RealtimeFramingDisplay.StoredName(preset, "第一章"));
 
         preset.Name = "第一章";
         Assert.Equal("第一章", RealtimeFramingDisplay.Name(preset));
+        Assert.False(RealtimeFramingDisplay.IsAutomaticallyNamed(preset));
     }
 
     [Fact]
-    public void AWindowWithoutATitle_IsNamedByItsApplication()
+    public void TheDeleteQuestion_NamesTheTargetForAnAutomaticName_AndOnlyTheNameForTheUsersOwn()
     {
-        var preset = Make("a", mode: RealtimeCaptureMode.Window, process: "game", title: "");
+        var automatic = Make("a", mode: RealtimeCaptureMode.Window, process: "ed6_win3", title: "英雄傳說 空之軌跡 the 3rd", ordinal: 5);
+        Assert.Equal(
+            LocalizationService.Format("S.Realtime.FramingDeleteConfirmTarget",
+                LocalizationService.Format("S.Realtime.FramingAutoName", 5), "英雄傳說 空之軌跡 the 3rd"),
+            RealtimeFramingDisplay.DeleteQuestion(automatic));
 
-        Assert.Equal("game", RealtimeFramingDisplay.Name(preset));
-    }
+        var untitled = Make("b", mode: RealtimeCaptureMode.Window, process: "game", title: "");
+        Assert.Contains("game", RealtimeFramingDisplay.DeleteQuestion(untitled));
 
-    [Fact]
-    public void ASecondPresetOfATarget_CarriesItsNumberInTheDefaultName()
-    {
-        var second = Make("b", mode: RealtimeCaptureMode.Window, process: "game", title: "Game", ordinal: 2);
-        var name = RealtimeFramingDisplay.Name(second);
-
-        Assert.Contains("Game", name);
-        Assert.Contains("2", name);
-        // The default name as typed is stored as "no name of the user's own", numbering included.
-        Assert.Equal("", RealtimeFramingDisplay.StoredName(second, name));
+        var named = Make("c", name: "戰鬥字幕");
+        Assert.Equal(LocalizationService.Format("S.Realtime.FramingDeleteConfirm", "戰鬥字幕"),
+            RealtimeFramingDisplay.DeleteQuestion(named));
     }
 
     // ── The bar's list ─────────────────────────────────────────────────────────────────────────
@@ -1112,7 +1143,7 @@ public class RealtimeFramingPresetTests
     public void TheSameExecutable_Retitled_IsStillItsTarget()
     {
         using var a = new TempExe();
-        var presets = new[] { Make("a", mode: RealtimeCaptureMode.Window, process: "Game", title: "Game A", path: a.Path) };
+        var presets = new[] { Make("a", mode: RealtimeCaptureMode.Window, process: "Game", title: "Game A", path: a.Path, selected: true) };
 
         var target = WindowTarget("Game", "Game A — Chapter 2", path: a.Path.ToLowerInvariant());
         Assert.Equal("a", RealtimeFramingStore.Match(presets, target)!.Id);
@@ -1127,15 +1158,15 @@ public class RealtimeFramingPresetTests
         var gone = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ot-gone-" + Guid.NewGuid().ToString("N"), "Game.exe");
         var target = WindowTarget("Game", "Game", path: now.Path);
 
-        var noPath = new[] { Make("a", mode: RealtimeCaptureMode.Window, process: "Game", title: "Game") };
+        var noPath = new[] { Make("a", mode: RealtimeCaptureMode.Window, process: "Game", title: "Game", selected: true) };
         Assert.Equal("a", RealtimeFramingStore.Match(noPath, target)!.Id);
 
-        var moved = new[] { Make("a", mode: RealtimeCaptureMode.Window, process: "Game", title: "Game", path: gone) };
+        var moved = new[] { Make("a", mode: RealtimeCaptureMode.Window, process: "Game", title: "Game", path: gone, selected: true) };
         Assert.Equal("a", RealtimeFramingStore.Match(moved, target)!.Id);
         Assert.Single(RealtimeFramingStore.ListFor(moved, target, [], null).Rows);
 
         // A side that could not read its path is matched by the name too.
-        var kept = new[] { Make("a", mode: RealtimeCaptureMode.Window, process: "Game", title: "Game", path: now.Path) };
+        var kept = new[] { Make("a", mode: RealtimeCaptureMode.Window, process: "Game", title: "Game", path: now.Path, selected: true) };
         Assert.Equal("a", RealtimeFramingStore.Match(kept, target with { WindowPath = "" })!.Id);
     }
 
@@ -1188,15 +1219,15 @@ public class RealtimeFramingPresetTests
     {
         var presets = new[]
         {
-            Make("screen"),
-            Make("game", mode: RealtimeCaptureMode.Window, process: "game", title: "Game"),
+            Make("screen", selected: true),
+            Make("game", mode: RealtimeCaptureMode.Window, process: "game", title: "Game", selected: true),
         };
         var skipped = RealtimeFramingStore.SkipInto([], ScreenTarget());
 
         Assert.Null(RealtimeFramingStore.Match(presets, ScreenTarget(), skipped));
         Assert.Equal("game", RealtimeFramingStore.Match(presets, WindowTarget(), skipped)!.Id);
         Assert.Equal("screen2", RealtimeFramingStore.Match(
-            [.. presets, Make("screen2", device: Display2)], ScreenTarget() with { DeviceName = Display2 }, skipped)!.Id);
+            [.. presets, Make("screen2", device: Display2, selected: true)], ScreenTarget() with { DeviceName = Display2 }, skipped)!.Id);
     }
 
     [Fact]
@@ -1236,16 +1267,18 @@ public class RealtimeFramingPresetTests
     }
 
     [Fact]
-    public void Unskipped_ATargetNeverPickedFrom_StillOpensOnItsNewest()
+    public void WithNothingSelected_NoPresetIsTakenForTheUser_NotEvenTheNewest()
     {
-        // 不套用 is its own state: every preset unselected is "never picked", which opens on the newest.
         var presets = new[]
         {
             Make("new", savedAt: new DateTime(2026, 2, 1)),
             Make("old"),
         };
 
-        Assert.Equal("new", RealtimeFramingStore.Match(presets, ScreenTarget(), [])!.Id);
+        Assert.Null(RealtimeFramingStore.Match(presets, ScreenTarget(), []));
+        Assert.Null(RealtimeFramingStore.Match(
+            [Make("game", mode: RealtimeCaptureMode.Window, process: "game", title: "Game")],
+            WindowTarget("game", "Game"), []));
     }
 
     // ── The page's card ─────────────────────────────────────────────────────────────────────────
@@ -1271,15 +1304,30 @@ public class RealtimeFramingPresetTests
     }
 
     [Fact]
-    public void TheCard_MarksWhatASessionWouldOpenOn_TheNewestWhenNothingWasPicked()
+    public void TheCard_FoldedPastThree_ShowsTheOneInUseFirst_ThenTheFirstOthers()
+    {
+        var presets = Enumerable.Range(1, 5)
+            .Select(n => Make("p" + n, selected: n == 4, ordinal: n))
+            .ToList();
+
+        var groups = RealtimeFramingStore.GroupFor(presets, ScreenTarget(), []);
+        var (shown, hidden) = CollapsibleRows.Shown(groups.Current.Count, null, expanded: false);
+
+        Assert.Equal(["p4", "p1", "p2"], shown.Select(index => groups.Current[index].Id));
+        Assert.Equal(2, hidden);
+        Assert.True(CollapsibleRows.HasMoreRow(groups.Current.Count, hidden, expanded: false));
+    }
+
+    [Fact]
+    public void TheCard_WithNothingSelected_MarksNothing_AndKeepsTheOrder()
     {
         var older = Make("older");
         var newer = Make("newer", savedAt: new DateTime(2026, 2, 1));
 
-        var groups = RealtimeFramingStore.GroupFor([newer, older], ScreenTarget(), []);
+        var groups = RealtimeFramingStore.GroupFor([older, newer], ScreenTarget(), []);
 
-        Assert.Equal("newer", groups.OpensOn!.Id);
-        Assert.Equal(["newer", "older"], groups.Current.Select(preset => preset.Id));
+        Assert.Null(groups.OpensOn);
+        Assert.Equal(["older", "newer"], groups.Current.Select(preset => preset.Id));
     }
 
     [Fact]
@@ -1313,48 +1361,22 @@ public class RealtimeFramingPresetTests
     }
 
     [Fact]
-    public void Deleting_TheSelectedPreset_TheTargetOpensOnTheNext_AndUndoPutsBackOrderAndMark()
+    public void Deleting_TheSelectedPreset_LeavesTheTargetWithNone_AndItOpensEmptyWithNothingToSay()
     {
         var a = Make("a", savedAt: new DateTime(2026, 3, 1));
         var b = Make("b", selected: true, savedAt: new DateTime(2026, 2, 1));
-        var c = Make("c");
         var game = Make("game", mode: RealtimeCaptureMode.Window, process: "game", title: "Game", selected: true);
-        var before = new[] { a, b, c, game };
 
-        var (after, removed) = RealtimeFramingStore.ForgetInto(before, "b");
-        Assert.Equal(["a", "c", "game"], after.Select(preset => preset.Id));
-        Assert.Equal(1, removed!.Index);
-        Assert.Equal("a", RealtimeFramingStore.GroupFor(after, ScreenTarget(), []).OpensOn!.Id);
+        var after = RealtimeFramingStore.ForgetInto([a, b, game], "b");
 
-        var restored = RealtimeFramingStore.RestoreInto(after, removed);
-        Assert.Equal(["a", "b", "c", "game"], restored.Select(preset => preset.Id));
-        Assert.Equal("b", RealtimeFramingStore.GroupFor(restored, ScreenTarget(), []).OpensOn!.Id);
-        Assert.True(restored.Single(preset => preset.Id == "game").Selected);
-    }
+        Assert.Equal(["a", "game"], after.Select(preset => preset.Id));
+        Assert.Null(RealtimeFramingStore.Match(after, ScreenTarget(), []));
+        Assert.Null(RealtimeFramingStore.GroupFor(after, ScreenTarget(), []).OpensOn);
+        Assert.Equal(RealtimeFramingStore.Miss.None, RealtimeFramingStore.Explain(after, ScreenTarget(), out var nearest, []));
+        Assert.Null(nearest);
 
-    [Fact]
-    public void Undo_AfterAnotherWasPickedMeanwhile_TheRestoredOneIsTheTargetsAgain()
-    {
-        var (after, removed) = RealtimeFramingStore.ForgetInto(
-            [Make("a", selected: true), Make("b")], "a");
-        after = RealtimeFramingStore.SelectInto(after, "b");
-
-        var restored = RealtimeFramingStore.RestoreInto(after, removed!);
-
-        Assert.Equal(["a", "b"], restored.Select(preset => preset.Id));
-        Assert.Equal(["a"], restored.Where(preset => preset.Selected).Select(preset => preset.Id));
-    }
-
-    [Fact]
-    public void Undo_WhenTheListShrankMeanwhile_PutsItAtTheEnd_AndTwiceChangesNothing()
-    {
-        var (after, removed) = RealtimeFramingStore.ForgetInto([Make("a"), Make("b"), Make("c")], "c");
-        after = RealtimeFramingStore.ForgetInto(after, "b").Presets;
-
-        var restored = RealtimeFramingStore.RestoreInto(after, removed!);
-        Assert.Equal(["a", "c"], restored.Select(preset => preset.Id));
-        Assert.Equal(["a", "c"], RealtimeFramingStore.RestoreInto(restored, removed!).Select(preset => preset.Id));
-        Assert.Null(RealtimeFramingStore.ForgetInto(restored, "missing").Removed);
+        // Another target's selection is not touched.
+        Assert.Equal("game", RealtimeFramingStore.Match(after, WindowTarget("game", "Game"), [])!.Id);
     }
 
     private sealed class TempExe : IDisposable

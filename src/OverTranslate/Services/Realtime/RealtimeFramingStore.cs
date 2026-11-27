@@ -22,10 +22,11 @@ namespace OverTranslate.Services.Realtime;
 /// same size is the same target.</para>
 ///
 /// <para>One target may hold several presets, and which of them a session opens on is the one marked
-/// <see cref="RealtimeFramingPreset.Selected"/> — saving a framing and picking one in the page's list
-/// both set it — or the newest it has when nothing is marked. For a window the title narrows the
-/// candidates first (a preset saved under the window's current title is that window's); the title is
-/// a preference, not part of the target: a browser retitles itself with every video.</para>
+/// <see cref="RealtimeFramingPreset.Selected"/> — saving a framing and picking one in the bar's list
+/// both set it. With none marked the target opens empty: saving always marks, so only deleting the
+/// marked one leaves a target there, and a preset the user did not choose is not put on the screen
+/// for them. For a window the title is a preference between marked ones, not part of the target: a
+/// browser retitles itself with every video.</para>
 /// </remarks>
 internal static class RealtimeFramingStore
 {
@@ -196,35 +197,30 @@ internal static class RealtimeFramingStore
         [.. presets.Where(preset => IsFor(preset, target))];
 
     /// <summary>
-    /// Which of the presets kept for <paramref name="target"/> a session opens on: the selected one
-    /// where the user picked one, otherwise the newest — and for a window, the ones saved under its
-    /// current title first. Null when <paramref name="skipped"/> holds the target: the user chose
-    /// 不套用 for it, and it opens empty.
+    /// Which of the presets kept for <paramref name="target"/> a session opens on: the selected one,
+    /// and for a window one saved under its current title before another. Null when none is selected
+    /// — the selected one was deleted — and when <paramref name="skipped"/> holds the target: the
+    /// user chose 不套用 for it. Either way it opens empty.
     /// </summary>
+    /// <remarks>
+    /// No newest-of-the-rest stands in for a deleted selection: the user removed what the target
+    /// opened on, and putting another of its framings on the screen for them would be a choice they
+    /// did not make. Picking or saving one in the bar's list marks it again.
+    /// </remarks>
     public static RealtimeFramingPreset? Match(
         IReadOnlyList<RealtimeFramingPreset> presets, Target target,
         IReadOnlyCollection<string>? skipped = null)
     {
         if (IsSkipped(skipped, target)) return null;
 
-        var candidates = presets.Where(preset => IsFor(preset, target)).ToList();
-        if (candidates.Count == 0) return null;
+        var selected = presets.Where(preset => preset.Selected && IsFor(preset, target)).ToList();
+        if (selected.Count == 0) return null;
 
-        if (target.IsWindow)
-        {
-            var titled = candidates.Where(preset => preset.WindowTitle == target.WindowTitle).ToList();
-            if (titled.Count > 0) return titled.FirstOrDefault(preset => preset.Selected) ?? titled[0];
-
-            // No title matches. The user's own pick is still an answer; without one, a single title
-            // across the target means it can only be that window retitled, and several titles leave
-            // the windows indistinguishable.
-            if (candidates.FirstOrDefault(preset => preset.Selected) is { } selected) return selected;
-            return candidates.Select(preset => preset.WindowTitle).Distinct().Count() == 1
-                ? candidates[0]
-                : null;
-        }
-
-        return candidates.FirstOrDefault(preset => preset.Selected) ?? candidates[0];
+        // A target has one selected preset, but a kept executable that has moved can make two keys
+        // one target (see SameProgram): the window's own title decides between them.
+        return target.IsWindow
+            ? selected.FirstOrDefault(preset => preset.WindowTitle == target.WindowTitle) ?? selected[0]
+            : selected[0];
     }
 
     /// <summary>Why no preset was applied to a target that has some kept for it.</summary>
@@ -290,8 +286,8 @@ internal static class RealtimeFramingStore
     /// but the size — the reason a session that was started with a preset in reach says on the bar.
     /// </summary>
     /// <param name="nearest">
-    /// The preset the reason is about: the selected one for this target, or the newest, so its size
-    /// can be named. Null when nothing is kept.
+    /// The preset the reason is about — the selected one for this monitor or application at another
+    /// size — so its size can be named. Null when there is none: nothing to explain.
     /// </param>
     public static Miss Explain(Target target, out RealtimeFramingPreset? nearest) =>
         Explain(Realtime.FramingPresets, target, out nearest, Realtime.FramingSkippedTargets);
@@ -315,9 +311,8 @@ internal static class RealtimeFramingStore
             return fit;
         }
 
-        // A preset of the right size is a candidate Match may still have declined — two windows of
-        // one title-less application, say; the size is not what stood in the way, so it is not the
-        // reason to give.
+        // A preset of the right size that Match did not take is one the user has not selected; the
+        // size is not what stood in the way, so it is not the reason to give.
         if (presets.Any(preset => IsFor(preset, target))) return Miss.None;
 
         if (target.IsWindow)
@@ -328,16 +323,17 @@ internal static class RealtimeFramingStore
                 preset.IsForWindow && SameProgram(preset.WindowProcess, preset.WindowPath, target)).ToList();
             if (near.Count == 0) return Miss.None;
 
-            nearest = near.FirstOrDefault(preset => preset.Selected) ?? near[0];
-            return Miss.WindowSize;
+            // Only a selected one is reason to speak: with none, the target opens empty as asked.
+            nearest = near.FirstOrDefault(preset => preset.Selected);
+            return nearest is null ? Miss.None : Miss.WindowSize;
         }
 
         var sameMonitor = presets.Where(preset =>
             !preset.IsForWindow && preset.ScreenDeviceName == target.DeviceName).ToList();
         if (sameMonitor.Count == 0) return Miss.None;
 
-        nearest = sameMonitor.FirstOrDefault(preset => preset.Selected) ?? sameMonitor[0];
-        return Miss.ScreenSize;
+        nearest = sameMonitor.FirstOrDefault(preset => preset.Selected);
+        return nearest is null ? Miss.None : Miss.ScreenSize;
     }
 
     /// <summary>
@@ -656,9 +652,9 @@ internal static class RealtimeFramingStore
     /// is kept for it, until a preset of it is picked or saved.
     /// </summary>
     /// <remarks>
-    /// Remembered beside the presets rather than as every preset unselected, because unselected is
-    /// already a state with its own meaning — the target has never had one picked, and opens on the
-    /// newest.
+    /// Remembered beside the presets rather than as every preset unselected: the bar's list ticks
+    /// 不套用 for this, and a selection deleted from the page is not the user choosing 不套用 —
+    /// though both open empty.
     /// </remarks>
     public static void Skip(Target target)
     {
@@ -701,87 +697,30 @@ internal static class RealtimeFramingStore
         return true;
     }
 
-    /// <summary>A preset taken out of the list, and the place it had there — what 復原 puts back.</summary>
-    internal sealed record Forgotten(RealtimeFramingPreset Preset, int Index);
-
     /// <summary>
-    /// Drops the preset <paramref name="id"/> as the card's 刪除 does: undoably, so the preset and its
-    /// place are handed back for <see cref="Restore"/>.
+    /// Drops the preset <paramref name="id"/>, the card's 刪除. Nothing else is touched: a target
+    /// that loses its selected preset is left with none, and opens empty — see <see cref="Match"/>.
     /// </summary>
-    /// <returns>What was taken out, or null when no preset went by that id.</returns>
-    public static Forgotten? ForgetUndoably(string id)
+    /// <returns>False when no preset went by that id.</returns>
+    public static bool Forget(string id)
     {
-        var (presets, removed) = ForgetInto(Realtime.FramingPresets, id);
-        if (removed is null) return null;
-
-        SettingsService.Instance.UpdateRealtimeFramingPresets(presets);
-        return removed;
-    }
-
-    /// <summary>Puts back a preset <see cref="ForgetUndoably"/> took out — the card's 復原.</summary>
-    /// <returns>False when it is somehow back already, or the list is full again.</returns>
-    public static bool Restore(Forgotten removed)
-    {
-        var presets = RestoreInto(Realtime.FramingPresets, removed);
+        var presets = ForgetInto(Realtime.FramingPresets, id);
         if (presets.Count == Realtime.FramingPresets.Count) return false;
 
         SettingsService.Instance.UpdateRealtimeFramingPresets(presets);
         return true;
     }
 
-    /// <summary><see cref="ForgetUndoably"/> as a list in and a list out, for a test that has no settings file.</summary>
-    /// <remarks>
-    /// Nothing else is touched: the target's other presets keep their marks, so 復原 has only the one
-    /// preset to put back, and a target that loses its selected preset opens on whichever
-    /// <see cref="Match(IReadOnlyList{RealtimeFramingPreset}, Target, IReadOnlyCollection{string}?)"/>
-    /// picks of the rest — the newest, or the one under the window's own title.
-    /// </remarks>
-    public static (List<RealtimeFramingPreset> Presets, Forgotten? Removed) ForgetInto(
-        IReadOnlyList<RealtimeFramingPreset> current, string id)
-    {
-        var presets = current.Select(preset => preset.Clone()).ToList();
-        int index = presets.FindIndex(preset => preset.Id == id);
-        if (index < 0) return (presets, null);
-
-        var removed = presets[index];
-        presets.RemoveAt(index);
-        return (presets, new Forgotten(removed, index));
-    }
-
-    /// <summary><see cref="Restore"/> as a list in and a list out, for a test that has no settings file.</summary>
-    /// <remarks>
-    /// Back in its old place, or at the end when the list has grown shorter since. Where it was its
-    /// target's selected preset it is again, and any other preset of the target marked since is
-    /// unmarked: 復原 is the deletion not having happened. Refused — the list handed back as it came —
-    /// when the id is back already or the list has filled up meanwhile.
-    /// </remarks>
-    public static List<RealtimeFramingPreset> RestoreInto(
-        IReadOnlyList<RealtimeFramingPreset> current, Forgotten removed)
-    {
-        var presets = current.Select(preset => preset.Clone()).ToList();
-        if (presets.Any(preset => preset.Id == removed.Preset.Id) ||
-            presets.Count >= RealtimeSettings.MaxFramingPresets)
-            return presets;
-
-        var back = removed.Preset.Clone();
-        presets.Insert(Math.Min(removed.Index, presets.Count), back);
-
-        if (back.Selected)
-        {
-            foreach (var other in presets.Where(preset =>
-                         preset.Id != back.Id && preset.TargetKey == back.TargetKey))
-                other.Selected = false;
-        }
-
-        return presets;
-    }
+    /// <summary><see cref="Forget"/> as a list in and a list out, for a test that has no settings file.</summary>
+    public static List<RealtimeFramingPreset> ForgetInto(IReadOnlyList<RealtimeFramingPreset> current, string id) =>
+        [.. current.Where(preset => preset.Id != id).Select(preset => preset.Clone())];
 
     /// <summary>
     /// The page's 翻譯區域預設 card, split for the screen or window chosen in 步驟 1／2: that target's
     /// presets on top with the one it opens on first, and every other preset under 其他螢幕或視窗.
     /// </summary>
     /// <param name="Current">This target's presets, at any size: the one it opens on, then the rest in order.</param>
-    /// <param name="OpensOn">The one a session on this target would open on; null for 不套用 or none.</param>
+    /// <param name="OpensOn">The one a session on this target would open on; null when none is selected or 不套用.</param>
     /// <param name="Others">Every preset not of this target, in the list's order.</param>
     internal sealed record CardGroups(
         IReadOnlyList<RealtimeFramingPreset> Current,

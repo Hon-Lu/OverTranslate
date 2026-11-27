@@ -60,73 +60,33 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
-        <!-- 其他螢幕或視窗: one row as tall and as framed as the list's, which opens into the list of
-             every other target's presets under it. Its corners come in through Tag: all four while
-             closed, the top two while the list hangs from it. The whole row is the control. -->
-        <Style x:Key="FramingOthersToggle" TargetType="Button">
-            <!-- A row is 54 high and its rule 1: the same 55 with this row's own two edges. -->
-            <Setter Property="MinHeight" Value="55"/>
-            <Setter Property="Padding" Value="14,0,16,0"/>
+        <!-- 其他螢幕或視窗: a line of text that opens the list of every other target's presets under
+             it — a chevron, the words, how many. No fill and no frame, so it weighs less than the
+             rows above it: it is a way to more, not one of the list. The secondary colour until the
+             pointer is on it, then the primary; the accent ring for the keyboard. -->
+        <Style x:Key="FramingOthersDisclosure" TargetType="Button">
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Padding" Value="4,0,8,0"/>
+            <Setter Property="Margin" Value="-4,0,0,0"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-            <Setter Property="Tag">
-                <Setter.Value>
-                    <CornerRadius>10</CornerRadius>
-                </Setter.Value>
-            </Setter>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Root" Background="Transparent"
-                                BorderBrush="{DynamicResource AppBorder}" BorderThickness="1"
-                                CornerRadius="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter VerticalAlignment="Center"
-                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonHoverBg}"/>
-                            </Trigger>
-                            <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonHoverBg}"/>
-                                <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource AppAccent}"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonPressedBg}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- 復原 in the line a deletion leaves: an accent word that lightens under the pointer. -->
-        <Style x:Key="FramingUndoButton" TargetType="Button">
-            <Setter Property="Foreground" Value="{DynamicResource AppAccent}"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Padding" Value="10,4"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Root" Background="Transparent" CornerRadius="5"
+                        <Border x:Name="Root" Background="Transparent" CornerRadius="6"
                                 BorderBrush="Transparent" BorderThickness="1"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonHoverBg}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource AppAccent}"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonPressedBg}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -173,83 +133,46 @@
                 </Grid>
             </StackPanel>
 
-            <!-- 其他螢幕或視窗: every other target's presets, folded into one row until it is opened.
+            <!-- 其他螢幕或視窗: every other target's presets, behind one line until it is opened.
                  Not remembered: the page opens with it closed. -->
-            <StackPanel x:Name="OthersPanel" Margin="0,14,0,0">
-                <Button x:Name="OthersToggle" Style="{StaticResource FramingOthersToggle}"
+            <StackPanel x:Name="OthersPanel" Margin="0,10,0,0">
+                <Button x:Name="OthersToggle" Style="{StaticResource FramingOthersDisclosure}"
                         Click="OthersToggle_Click"
                         AutomationProperties.AutomationId="FramingOthersToggle">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource S.Realtime.FramingOthers}"
-                                       FontFamily="{DynamicResource AppFont}"
-                                       FontSize="{StaticResource AppFontSize}"
-                                       VerticalAlignment="Center"/>
-                            <Border Style="{StaticResource FramingInUseBadge}" Background="{DynamicResource AppSurfaceBg}">
-                                <TextBlock x:Name="OthersCount"
-                                           FontFamily="{DynamicResource AppFont}"
-                                           FontSize="11.5"
-                                           Foreground="{DynamicResource AppTextSecondary}"/>
-                            </Border>
-                        </StackPanel>
-                        <!-- ChevronDown, turned half a turn while open. Drawn by the icon font, whose
-                             glyph sits on the middle of its em box, so centring the box centres the
-                             mark on the text's x-height. -->
-                        <TextBlock x:Name="OthersChevron" Grid.Column="1"
-                                   Text="&#xE70D;"
+                    <StackPanel Orientation="Horizontal">
+                        <!-- ChevronDown, turned half a turn while open. The icon font sits the mark on
+                             the middle of its em box, so centring the box centres it on the text. -->
+                        <TextBlock Text="&#xE70D;"
                                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                   FontSize="12"
-                                   Foreground="{DynamicResource AppTextSecondary}"
+                                   FontSize="10"
                                    VerticalAlignment="Center"
+                                   Margin="0,1,8,0"
                                    RenderTransformOrigin="0.5,0.5">
                             <TextBlock.RenderTransform>
                                 <RotateTransform x:Name="OthersChevronTurn" Angle="0"/>
                             </TextBlock.RenderTransform>
                         </TextBlock>
-                    </Grid>
+                        <TextBlock Text="{DynamicResource S.Realtime.FramingOthers}"
+                                   FontFamily="{DynamicResource AppFont}"
+                                   FontSize="13"
+                                   VerticalAlignment="Center"/>
+                        <!-- Fainter than the words: the count is the least of the line. -->
+                        <TextBlock x:Name="OthersCount"
+                                   FontFamily="{DynamicResource AppFont}"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource AppTextSecondary}"
+                                   Opacity="0.75"
+                                   VerticalAlignment="Center"
+                                   Margin="8,0,0,0"/>
+                    </StackPanel>
                 </Button>
 
-                <!-- Hangs from the row above: no top edge of its own (the row's bottom edge is the
-                     rule between them) and only the bottom corners rounded. -->
                 <Border x:Name="OthersListBorder" BorderBrush="{DynamicResource AppBorder}"
-                        BorderThickness="1,0,1,1" CornerRadius="0,0,10,10" Visibility="Collapsed"
+                        BorderThickness="1" CornerRadius="10" Margin="0,4,0,0" Visibility="Collapsed"
                         SizeChanged="OthersListBorder_SizeChanged">
                     <StackPanel x:Name="OthersHost" AutomationProperties.AutomationId="FramingOthersList"/>
                 </Border>
             </StackPanel>
-
-            <!-- What a deletion leaves for a few seconds: what went, and 復原. -->
-            <Border x:Name="UndoBar" Margin="0,12,0,0" Padding="14,4,4,4" CornerRadius="8"
-                    Background="{DynamicResource AppSurfaceBg}"
-                    BorderBrush="{DynamicResource AppBorder}" BorderThickness="1"
-                    Visibility="Collapsed"
-                    MouseEnter="UndoBar_MouseEnter" MouseLeave="UndoBar_MouseLeave">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock x:Name="UndoText"
-                               FontFamily="{DynamicResource AppFont}"
-                               FontSize="13"
-                               Foreground="{DynamicResource AppTextPrimary}"
-                               TextTrimming="CharacterEllipsis"
-                               VerticalAlignment="Center"
-                               AutomationProperties.AutomationId="FramingUndoText"
-                               AutomationProperties.LiveSetting="Polite"/>
-                    <Button x:Name="UndoButton" Grid.Column="1" Margin="12,0,0,0"
-                            Style="{StaticResource FramingUndoButton}"
-                            Content="{DynamicResource S.Realtime.FramingUndo}"
-                            FontFamily="{DynamicResource AppFont}"
-                            FontSize="13"
-                            Click="UndoButton_Click"
-                            AutomationProperties.AutomationId="FramingUndo"/>
-                </Grid>
-            </Border>
         </StackPanel>
     </Border>
 </UserControl>
