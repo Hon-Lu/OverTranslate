@@ -70,7 +70,19 @@ internal static class BilingualProbe
         output.WriteLine("provider\texpected\ttext\tguessed\tdetected_first\tfinal_target\tfinal_source\trequests\ttranslation");
         foreach (var name in names)
         {
-            var provider = new EngineProvider(name switch
+            // "none": the characters alone, no request at all.
+            if (name == "none")
+            {
+                foreach (var row in rows)
+                    output.WriteLine(string.Join('	', name, row[0], row[1],
+                        BilingualDirection.ResolveSource(row[1], pair.First, pair.Second) ?? "-", "-", "-", "-", 0, ""));
+                continue;
+            }
+
+            // "-nodetect" drops the engine's detected language, which is what an OpenAI-compatible
+            // server gives the chain: nothing.
+            var detects = !name.EndsWith("-nodetect", StringComparison.Ordinal);
+            var provider = new EngineProvider(name.Replace("-nodetect", "") switch
             {
                 "microsoft" => new MicrosoftTranslator(http),
                 "google" => (ITextTranslator)new GoogleWebTranslator(http),
@@ -93,7 +105,7 @@ internal static class BilingualProbe
                             [new OcrTextBlock(text, new System.Windows.Rect())],
                             BilingualTranslation.SourceCode(source), target, "");
                         firstDetected ??= result.DetectedLang;
-                        return result;
+                        return detects ? result : (result.Blocks, "");
                     });
                 }
                 catch (Exception ex)
