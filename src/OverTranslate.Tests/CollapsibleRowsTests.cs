@@ -4,7 +4,8 @@ using Xunit;
 namespace OverTranslate.Tests;
 
 /// <summary>
-/// The folded lists on the 即時翻譯 page: which rows show before 顯示其餘, and what the line counts.
+/// The folded custom list on the 即時翻譯 page's 模式 card: which rows show before 顯示其餘, in what
+/// order, and what the row counts.
 /// </summary>
 public class CollapsibleRowsTests
 {
@@ -32,46 +33,44 @@ public class CollapsibleRowsTests
     }
 
     [Fact]
-    public void Unfolded_ShowsEveryRow()
+    public void APinnedRowPastTheThird_GoesFirst_AndTheListStaysThreeRows()
     {
-        var (shown, hidden) = CollapsibleRows.Shown(7, [5], expanded: true);
+        var (shown, hidden) = CollapsibleRows.Shown(7, 4, expanded: false);
 
-        Assert.Equal(Enumerable.Range(0, 7), shown);
+        Assert.Equal([4, 0, 1], shown);
+        Assert.Equal(4, hidden);
+    }
+
+    [Fact]
+    public void APinnedRowAmongTheFirstThree_GoesFirst_TheOthersKeepTheirOrder()
+    {
+        var (shown, hidden) = CollapsibleRows.Shown(5, 2, expanded: false);
+
+        Assert.Equal([2, 0, 1], shown);
+        Assert.Equal(2, hidden);
+    }
+
+    [Fact]
+    public void Unfolded_ShowsEveryRow_InTheSameOrderAsFolded()
+    {
+        var (shown, hidden) = CollapsibleRows.Shown(7, 5, expanded: true);
+
+        Assert.Equal([5, 0, 1, 2, 3, 4, 6], shown);
         Assert.Equal(0, hidden);
     }
 
-    [Fact]
-    public void ASelectedRowPastTheThird_ShowsInItsOwnPlace_AndIsNotCountedInTheRest()
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(7)]
+    public void APinOutOfRange_IsIgnored(int pinned)
     {
-        var (shown, hidden) = CollapsibleRows.Shown(7, [4], expanded: false);
-
-        Assert.Equal([0, 1, 2, 4], shown);
-        Assert.Equal(3, hidden);
-    }
-
-    [Fact]
-    public void SeveralKeptRows_AllShow_InOrder_AndOnesAlreadyShownChangeNothing()
-    {
-        var (shown, hidden) = CollapsibleRows.Shown(8, [6, 1, 3, 42, -1], expanded: false);
-
-        Assert.Equal([0, 1, 2, 3, 6], shown);
-        Assert.Equal(3, hidden);
-    }
-
-    [Fact]
-    public void WhenTheKeptRowIsTheOnlyOneLeft_NothingIsHidden()
-    {
-        var (shown, hidden) = CollapsibleRows.Shown(4, [3], expanded: false);
-
-        Assert.Equal([0, 1, 2, 3], shown);
-        Assert.Equal(0, hidden);
+        Assert.Equal([0, 1, 2], CollapsibleRows.Shown(7, pinned, expanded: false).Shown);
     }
 
     [Theory]
     [InlineData(3, 0, false, false)]
     [InlineData(7, 4, false, true)]
     [InlineData(7, 0, true, true)]
-    [InlineData(4, 0, false, false)]
     public void TheMoreRow_IsThereWhenRowsAreFoldedAwayOrTheListIsUnfolded(int count, int hidden, bool expanded, bool expected) =>
         Assert.Equal(expected, CollapsibleRows.HasMoreRow(count, hidden, expanded));
 
@@ -79,8 +78,8 @@ public class CollapsibleRowsTests
     public void TheCountFollowsTheList_AsRowsAreAddedAndRemoved()
     {
         Assert.Equal(1, CollapsibleRows.Shown(4, null, false).Hidden);
-        Assert.Equal(2, CollapsibleRows.Shown(5, null, false).Hidden);
-        Assert.Equal(0, CollapsibleRows.Shown(3, null, false).Hidden);
+        Assert.Equal(2, CollapsibleRows.Shown(5, 0, false).Hidden);
+        Assert.Equal(0, CollapsibleRows.Shown(3, 2, false).Hidden);
         Assert.False(CollapsibleRows.Folds(3));
     }
 }

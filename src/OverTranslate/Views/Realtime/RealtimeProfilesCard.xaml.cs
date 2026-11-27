@@ -75,9 +75,9 @@ public partial class RealtimeProfilesCard : UserControl
     // new then.
     private HashSet<string>? _listedCustomIds;
 
-    // The mode made most recently on this visit to the page: kept in view while the list is folded,
-    // as the 翻譯區域預設 card keeps its selected preset — the list has no selected row of its own,
-    // and a mode just made that landed among the folded rows would look as if it had not been made.
+    // The mode made most recently on this visit to the page: listed first, folded or not — the list
+    // has no selected row of its own, and a mode just made that landed among the folded rows would
+    // look as if it had not been made. The folded list stays three rows; see CollapsibleRows.
     private string? _addedCustomId;
 
     // Whether the user unfolded the custom list. Not kept: leaving the page and coming back folds it.
@@ -123,10 +123,8 @@ public partial class RealtimeProfilesCard : UserControl
         _listedCustomIds = ids;
         if (added is not null) _addedCustomId = added;
 
-        var keep = customs.Select((choice, index) => (choice, index))
-            .Where(item => item.choice.Id == _addedCustomId)
-            .Select(item => item.index);
-        var (shown, hidden) = CollapsibleRows.Shown(customs.Count, keep, _expanded);
+        int pinned = customs.FindIndex(choice => choice.Id == _addedCustomId);
+        var (shown, hidden) = CollapsibleRows.Shown(customs.Count, pinned >= 0 ? pinned : null, _expanded);
         Fill(CustomHost, shown.Select(index => customs[index]));
         // 顯示其餘 N 個 / 收起 as the list's last row; ＋ 新增自訂模式 stays the list's one button,
         // under it.
