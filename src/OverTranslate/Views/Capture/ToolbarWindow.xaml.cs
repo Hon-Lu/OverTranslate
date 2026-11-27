@@ -155,6 +155,7 @@ public partial class ToolbarWindow : Window
 
         RenderSpeakButton();
         RenderToggleButton();
+        RenderTranslateButton();
         InitializeLabels();
     }
 
@@ -471,11 +472,9 @@ public partial class ToolbarWindow : Window
     private void SetBusy(bool busy, string busyLabelKey)
     {
         _isBusy = busy;
+        _busyLabelKey = busyLabelKey;
         if (busy) HideEngineBadge(); // stale badge shouldn't linger while the next batch runs
-        TranslateBtn.IsEnabled = !busy;
-        TranslateLabel.Text = LocalizationService.Get(
-            busy ? busyLabelKey
-                 : _hasTranslated ? "S.Toolbar.Retranslate" : "S.Toolbar.Translate");
+        RenderTranslateButton();
         ToggleBtn.IsEnabled = !_isBusy && _toggleEnabled;
         CopyTextBtn.IsEnabled = !busy;
         OpenWindowBtn.IsEnabled = !_isBusy;
@@ -545,9 +544,7 @@ public partial class ToolbarWindow : Window
     {
         _hasTranslated = hasTranslated;
         RenderCopyTextButton();
-        if (!_isBusy)
-            TranslateLabel.Text = LocalizationService.Get(
-                hasTranslated ? "S.Toolbar.Retranslate" : "S.Toolbar.Translate");
+        RenderTranslateButton();
     }
 
     private void RenderCopyTextButton()

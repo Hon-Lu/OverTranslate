@@ -205,6 +205,8 @@
     <sys:String x:Key="S.Toolbar.Translating">翻譯中...</sys:String>
     <sys:String x:Key="S.Toolbar.Recognising">辨識中...</sys:String>
     <sys:String x:Key="S.Toolbar.Retranslate">重新翻譯</sys:String>
+    <sys:String x:Key="S.Toolbar.EditSelection">編輯框選範圍</sys:String>
+    <sys:String x:Key="S.Toolbar.EditSelectionHint">返回框選畫面進行修改</sys:String>
     <sys:String x:Key="S.Toolbar.ShowSource">顯示原文</sys:String>
     <sys:String x:Key="S.Toolbar.ShowTranslation">顯示譯文</sys:String>
     <sys:String x:Key="S.Toolbar.CopyText">複製文字</sys:String>

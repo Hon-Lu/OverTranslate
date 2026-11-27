@@ -199,6 +199,8 @@
     <sys:String x:Key="S.Toolbar.Translating">번역 중...</sys:String>
     <sys:String x:Key="S.Toolbar.Recognising">인식 중...</sys:String>
     <sys:String x:Key="S.Toolbar.Retranslate">다시 번역</sys:String>
+    <sys:String x:Key="S.Toolbar.EditSelection">선택 영역 편집</sys:String>
+    <sys:String x:Key="S.Toolbar.EditSelectionHint">선택 화면으로 돌아가 수정</sys:String>
     <sys:String x:Key="S.Toolbar.ShowSource">원문 보기</sys:String>
     <sys:String x:Key="S.Toolbar.ShowTranslation">번역문 보기</sys:String>
     <sys:String x:Key="S.Toolbar.CopyText">텍스트 복사</sys:String>
