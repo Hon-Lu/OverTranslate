@@ -53,15 +53,31 @@ public partial class OcrLanguagePacksCard : UserControl
     /// is a way of reading them rather than one of them. Nothing to do with it, so 內建 stands where
     /// the button would.
     /// </summary>
+    /// <remarks>
+    /// Nine names since #441, too many for one line at the default width, so the line breaks between
+    /// names rather than inside one: Chinese text wraps at any character, which put 「義大」 and
+    /// 「利文」 on two lines.
+    /// </remarks>
     private FrameworkElement BuiltInRow()
     {
-        var name = Names(LanguageData.OcrSourceLanguages
+        var names = LanguageData.OcrSourceLanguages
             .Where(language => language.Pack is null && !LanguageData.IsAutomaticSource(language.Code))
-            .Select(language => language.Code));
+            .Select(language => language.Name)
+            .ToList();
+        var separator = LocalizationService.Get("S.Settings.OcrPacksListSeparator");
+
+        var list = new WrapPanel();
+        System.Windows.Automation.AutomationProperties.SetName(list, string.Join(separator, names));
+        for (var i = 0; i < names.Count; i++)
+        {
+            var name = Label(i < names.Count - 1 ? names[i] + separator : names[i], "AppTextPrimary", 13);
+            name.TextWrapping = TextWrapping.NoWrap;
+            list.Children.Add(name);
+        }
 
         var builtIn = Label(LocalizationService.Get("S.Settings.OcrPacksBuiltIn"), "AppTextSecondary", 12);
         builtIn.TextWrapping = TextWrapping.NoWrap;
-        return Row(Label(name, "AppTextPrimary", 13), meta: null, builtIn, progress: null, first: true);
+        return Row(list, meta: null, builtIn, progress: null, first: true);
     }
 
     private FrameworkElement PackRow(OcrLanguagePack pack)
