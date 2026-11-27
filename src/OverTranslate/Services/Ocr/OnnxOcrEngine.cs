@@ -164,7 +164,7 @@ internal sealed class OnnxOcrEngine : IOcrEngine
 
             if (_disposed || _inUse > 0) return;
 
-            DisposeCurrentRuntime();
+            DisposeCurrentRuntime("asked");
         }
     }
 
@@ -1154,6 +1154,9 @@ internal sealed class OnnxOcrEngine : IOcrEngine
     private static readonly FieldInfo TextDetectorField =
         typeof(RapidOcr).GetField("_textDetector", BindingFlags.NonPublic | BindingFlags.Instance)!;
 
+    private static readonly FieldInfo TextClassifierField =
+        typeof(RapidOcr).GetField("_textClassifier", BindingFlags.NonPublic | BindingFlags.Instance)!;
+
     private static readonly Type DetectorInputType =
         typeof(RapidOcr).Assembly.GetType("RapidOcrNet.RapidOcr+DetectorInput")!;
 
@@ -1204,11 +1207,10 @@ internal sealed class OnnxOcrEngine : IOcrEngine
 
             // Release the previous model's sessions/arenas before loading the next one.
             // Clear the fields first so a failed load doesn't leave a disposed runtime cached.
-            _current?.Dispose();
-            _current = null;
-            _currentModelKey = null;
+            DisposeCurrentRuntime("another model asked for");
 
             RapidOcrRuntime runtime;
+            var loadStarted = System.Diagnostics.Stopwatch.GetTimestamp();
             _loading = true;
             try
             {
@@ -1218,6 +1220,11 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             {
                 _loading = false;
             }
+
+            Log.Info("OCR model {Model} loaded in {Ms}ms; private bytes {PrivateMB}MB",
+                modelKey,
+                (int)System.Diagnostics.Stopwatch.GetElapsedTime(loadStarted).TotalMilliseconds,
+                PrivateMegabytes());
 
             _current = runtime;
             _currentModelKey = modelKey;
@@ -1259,15 +1266,16 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             if (_disposed || _keepWarm || _inUse > 0)
                 return;
 
-            DisposeCurrentRuntime();
+            DisposeCurrentRuntime("idle");
         }
     }
 
     // Callers hold _sync and have already established that nothing is running against the runtime.
-    private void DisposeCurrentRuntime()
+    private void DisposeCurrentRuntime(string reason)
     {
         if (_current is null) return;
 
+        var modelKey = _currentModelKey;
         try
         {
             _current.Dispose();
@@ -1281,6 +1289,17 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             _current = null;
             _currentModelKey = null;
         }
+
+        // With the process's private bytes after the release, so a report of memory that stays high
+        // can be read against what the model gave back and when.
+        Log.Info("OCR model {Model} released ({Reason}); private bytes {PrivateMB}MB",
+            modelKey, reason, PrivateMegabytes());
+    }
+
+    private static long PrivateMegabytes()
+    {
+        using var process = System.Diagnostics.Process.GetCurrentProcess();
+        return process.PrivateMemorySize64 / (1024 * 1024);
     }
 
     /// <summary>
@@ -1401,24 +1420,45 @@ internal sealed class OnnxOcrEngine : IOcrEngine
 
         var engine = new RapidOcr();
 
-        // The model-set overload rather than the four-path one, because it is the only one that
-        // carries the detector's normalisation — and the shipped detector is no longer from the
-        // same family as the library's default. Verified equivalent before the swap: loaded this
-        // way with the old detector and the ImageNet statistics, a sweep of two frames across all
+        // The three models one at a time, which is all InitModels does, so that the detector can be
+        // given options of its own (see CreateDetectorSessionOptions). The detector still gets its
+        // normalisation, which only the model-set overload used to carry — the shipped detector is
+        // not from the same family as the library's default. Verified equivalent before that swap:
+        // loaded with the old detector and the ImageNet statistics, a sweep of two frames across all
         // fifteen sizes reproduced the four-path result line for line.
-        engine.InitModels(
-            new RapidOcrModelSet
-            {
-                DetModelPath = detector.Path,
-                ClsModelPath = clsPath,
-                RecModelPath = recPath,
-                KeysPath = dictPath,
-                DetMean = detector.Mean,
-                DetStd = detector.Std,
-            },
-            ThreadCount);
+        using (var detectorOptions = CreateDetectorSessionOptions())
+            ((TextDetector)TextDetectorField.GetValue(engine)!).InitModel(
+                detector.Path, detector.Mean, detector.Std, detectorOptions);
+        using (var options = RapidOcr.GetDefaultSessionOptions(ThreadCount))
+        {
+            ((TextClassifier)TextClassifierField.GetValue(engine)!).InitModel(clsPath, options);
+            ((TextRecognizer)TextRecognizerField.GetValue(engine)!).InitModel(recPath, dictPath, options);
+        }
 
         return new RapidOcrRuntime(modelName, engine);
+    }
+
+    /// <summary>
+    /// The library's own defaults for the detector, less the CPU memory arena.
+    /// </summary>
+    /// <remarks>
+    /// The arena keeps every buffer a pass asked for and hands it to the next pass instead of back
+    /// to the system, so it settles at what the largest image read so far needed and stays there for
+    /// as long as the model is loaded: through the minute before the idle release, and for the whole
+    /// of a realtime session. The detector is the model that sees the whole image, and a screenshot
+    /// is read at close to its native size, so its arena is where nearly all of it went (#437): four
+    /// 1600×1200 pages left about 500 MB there, on top of the models themselves.
+    ///
+    /// Only the detector. It runs once per pass, so asking the system for its buffers each time is
+    /// lost in the pass — the same pages and subtitle regions read no slower, measured side by side.
+    /// The classifier and recogniser run once per line, many times a pass, and without their arenas
+    /// those same reads were 7% slower, for some 150 MB more back.
+    /// </remarks>
+    internal static Microsoft.ML.OnnxRuntime.SessionOptions CreateDetectorSessionOptions()
+    {
+        var options = RapidOcr.GetDefaultSessionOptions(ThreadCount);
+        options.EnableCpuMemArena = false;
+        return options;
     }
 
     // Default ImgResize (1024) downscales wide UI screenshots and destroys small-text detail,
