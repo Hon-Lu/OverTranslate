@@ -3,6 +3,21 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <UserControl.Resources>
+        <!-- The accent ring for the keyboard on the card's buttons. A FocusVisualStyle rather than an
+             IsKeyboardFocused trigger: a click leaves a button focused — and a closed dialog hands
+             focus back to the button that opened it — so a trigger drew the ring after every click;
+             WPF shows a focus visual only when focus arrived by the keyboard. -->
+        <Style x:Key="FramingFocusRing">
+            <Setter Property="Control.Template">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <Border CornerRadius="6" BorderThickness="1"
+                                BorderBrush="{DynamicResource AppAccent}"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- ✎ and 🗑 at a row's right, drawn on a 16 grid like the bar's capsule marks: quiet in the
              secondary colour until the pointer is on one. Tab stops, with the accent ring when the
              keyboard is on one. -->
@@ -11,7 +26,7 @@
             <Setter Property="Height" Value="32"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource FramingFocusRing}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -22,10 +37,6 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonHoverBg}"/>
-                                <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
-                            </Trigger>
-                            <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource AppAccent}"/>
                                 <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
@@ -63,7 +74,7 @@
         <!-- 其他螢幕或視窗: a line of text that opens the list of every other target's presets under
              it — a chevron, the words, how many. No fill and no frame, so it weighs less than the
              rows above it: it is a way to more, not one of the list. The secondary colour until the
-             pointer is on it, then the primary; the accent ring for the keyboard. -->
+             pointer is on it, then the primary; the accent ring for the keyboard (FramingFocusRing). -->
         <Style x:Key="FramingOthersDisclosure" TargetType="Button">
             <Setter Property="Height" Value="32"/>
             <Setter Property="Padding" Value="4,0,8,0"/>
@@ -71,7 +82,7 @@
             <Setter Property="HorizontalAlignment" Value="Left"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource FramingFocusRing}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -82,10 +93,6 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
-                            </Trigger>
-                            <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource AppAccent}"/>
                                 <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
