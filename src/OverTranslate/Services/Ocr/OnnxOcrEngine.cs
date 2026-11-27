@@ -164,7 +164,7 @@ internal sealed class OnnxOcrEngine : IOcrEngine
 
             if (_disposed || _inUse > 0) return;
 
-            DisposeCurrentRuntime();
+            DisposeCurrentRuntime("asked");
         }
     }
 
@@ -1207,11 +1207,10 @@ internal sealed class OnnxOcrEngine : IOcrEngine
 
             // Release the previous model's sessions/arenas before loading the next one.
             // Clear the fields first so a failed load doesn't leave a disposed runtime cached.
-            _current?.Dispose();
-            _current = null;
-            _currentModelKey = null;
+            DisposeCurrentRuntime("another model asked for");
 
             RapidOcrRuntime runtime;
+            var loadStarted = System.Diagnostics.Stopwatch.GetTimestamp();
             _loading = true;
             try
             {
@@ -1221,6 +1220,11 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             {
                 _loading = false;
             }
+
+            Log.Info("OCR model {Model} loaded in {Ms}ms; private bytes {PrivateMB}MB",
+                modelKey,
+                (int)System.Diagnostics.Stopwatch.GetElapsedTime(loadStarted).TotalMilliseconds,
+                PrivateMegabytes());
 
             _current = runtime;
             _currentModelKey = modelKey;
@@ -1262,15 +1266,16 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             if (_disposed || _keepWarm || _inUse > 0)
                 return;
 
-            DisposeCurrentRuntime();
+            DisposeCurrentRuntime("idle");
         }
     }
 
     // Callers hold _sync and have already established that nothing is running against the runtime.
-    private void DisposeCurrentRuntime()
+    private void DisposeCurrentRuntime(string reason)
     {
         if (_current is null) return;
 
+        var modelKey = _currentModelKey;
         try
         {
             _current.Dispose();
@@ -1284,6 +1289,17 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             _current = null;
             _currentModelKey = null;
         }
+
+        // With the process's private bytes after the release, so a report of memory that stays high
+        // can be read against what the model gave back and when.
+        Log.Info("OCR model {Model} released ({Reason}); private bytes {PrivateMB}MB",
+            modelKey, reason, PrivateMegabytes());
+    }
+
+    private static long PrivateMegabytes()
+    {
+        using var process = System.Diagnostics.Process.GetCurrentProcess();
+        return process.PrivateMemorySize64 / (1024 * 1024);
     }
 
     /// <summary>
