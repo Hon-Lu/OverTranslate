@@ -18,6 +18,7 @@ public partial class App
     private const string ActivateEventName = "OverTranslate_Activate_9F3C7B2E";
 
     private EventWaitHandle? _activateEvent;
+    private MemoryUsageLog? _memoryUsageLog;
 
     [STAThread]
     private static void Main(string[] args)
@@ -88,6 +89,9 @@ public partial class App
         // first lines of every session's log rather than turning up partway down whichever of them
         // happened to reach it first.
         AppIdentityService.Initialize();
+
+        // Past the single-instance check, so a launch that only wakes the running copy writes nothing.
+        _memoryUsageLog = new MemoryUsageLog(MemoryUsageLog.DefaultInterval);
 
         ThemeService.Apply(SettingsService.Instance.Current.Theme);
 
@@ -172,6 +176,7 @@ public partial class App
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _memoryUsageLog?.Dispose();
         _activateEvent?.Dispose();
         base.OnExit(e);
     }

@@ -379,6 +379,20 @@ public class SettingsService
     }
 
     /// <summary>
+    /// Raised when the translation service (<see cref="AppSettings.Provider"/>) changes, once it is
+    /// in the file — for what depends on it elsewhere, such as which service reads aloud (#436).
+    /// </summary>
+    public event EventHandler? ProviderChanged;
+
+    /// <summary>Stores the translation service the user picked, wherever they picked it.</summary>
+    public void UpdateProvider(TranslationProvider provider)
+    {
+        Current.Provider = provider;
+        Save();
+        ProviderChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
     /// Raised when the services the menus offer change. Each open menu rebuilds its list from it,
     /// keeping whatever it has selected.
     /// </summary>

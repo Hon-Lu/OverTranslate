@@ -33,10 +33,17 @@ public static class EngineHttp
     /// How long one request may take before it is abandoned. Engines never wait longer than this on
     /// their own; a caller that wants a shorter answer passes a cancellation token.
     /// </param>
-    public static HttpClient CreateClient(TimeSpan timeout)
+    /// <param name="connectTimeout">
+    /// How long reaching the host may take — name lookup, connection and TLS handshake — before the
+    /// request fails without an answer. Unlimited by default, so a host whose packets are dropped
+    /// is waited on for all of <paramref name="timeout"/>.
+    /// </param>
+    public static HttpClient CreateClient(TimeSpan timeout, TimeSpan? connectTimeout = null)
     {
         var sockets = new SocketsHttpHandler
         {
+            ConnectTimeout = connectTimeout ?? Timeout.InfiniteTimeSpan,
+
             AutomaticDecompression = DecompressionMethods.All,
 
             // Bing's credentials come with cookies the page expects back.

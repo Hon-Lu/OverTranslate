@@ -7,8 +7,9 @@ internal static class GoogleVoices
 {
     /// <remarks>
     /// The list GTranslate carries (MIT, d4n3436/GTranslate), in Google's codes. Slovenian and
-    /// Persian are the languages the application offers that are not on it, and go to Microsoft:
-    /// both Google endpoints refuse <c>fa</c> (HTTP 400 and a refused call, measured 2026-11-01).
+    /// Persian are the languages the application offers that are not on it, and Google is said not
+    /// to read them: both Google endpoints refuse <c>fa</c> (HTTP 400 and a refused call, measured
+    /// 2026-11-01). Microsoft and Bing read every one of the application's languages.
     /// </remarks>
     private static readonly HashSet<string> Languages = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -40,21 +41,14 @@ public sealed class GoogleWebSpeech(HttpClient http) : SpeechEngine(http)
         var pieces = SpeechText.Split(text, GoogleVoices.MaxCharacters);
 
         // Side by side, as the page itself fetches them; total and idx say where each belongs.
-        var audio = await Task.WhenAll(pieces.Select((piece, i) =>
+        return await SpeakInPiecesAsync(pieces, int.MaxValue, async (i, token) =>
         {
             var url = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob" +
-                      $"&tl={Uri.EscapeDataString(language)}&q={Uri.EscapeDataString(piece)}" +
-                      $"&total={pieces.Count}&idx={i}&textlen={piece.Length}";
-            return SendAsync(url);
-        }));
-
-        return Concatenate(audio);
-
-        async Task<byte[]> SendAsync(string url)
-        {
+                      $"&tl={Uri.EscapeDataString(language)}&q={Uri.EscapeDataString(pieces[i])}" +
+                      $"&total={pieces.Count}&idx={i}&textlen={pieces[i].Length}";
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            return await ReadBytesAsync(request, cancellationToken);
-        }
+            return await ReadBytesAsync(request, token);
+        }, cancellationToken);
     }
 }
 
@@ -71,12 +65,11 @@ public sealed class GoogleRpcSpeech(HttpClient http) : SpeechEngine(http)
 
     public override bool Supports(string language) => GoogleVoices.Has(language);
 
-    protected override async Task<byte[]> SpeakAsync(string text, string language, CancellationToken cancellationToken)
+    protected override Task<byte[]> SpeakAsync(string text, string language, CancellationToken cancellationToken)
     {
-        var pieces = SpeechText.Split(text, GoogleVoices.MaxCharacters);
-        return Concatenate(await Task.WhenAll(pieces.Select(SendAsync)));
+        return SpeakInPiecesAsync(text, GoogleVoices.MaxCharacters, int.MaxValue, SendAsync, cancellationToken);
 
-        async Task<byte[]> SendAsync(string piece)
+        async Task<byte[]> SendAsync(string piece, CancellationToken cancellationToken)
         {
             // The last field is the "slow" switch, off.
             var call = new object?[]

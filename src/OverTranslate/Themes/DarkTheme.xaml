@@ -8,6 +8,8 @@
     <SolidColorBrush x:Key="AppCardBg"         Color="#252525"/>
     <SolidColorBrush x:Key="AppBorder"         Color="#3C3C3C"/>
     <SolidColorBrush x:Key="AppSubtleBorder"   Color="#303030"/>
+    <!-- The 1px between the rows of a group (Controls/AttachedRows): AppCardBg, the section's own fill, as if the rows were simply a pixel apart. -->
+    <SolidColorBrush x:Key="AppRowSeam"        Color="#252525"/>
 
     <!-- A note the reader is not being asked to act on, laid over AppCardBg. A lift rather than a
          dip: it has to read as a panel on top of the card, and AppAccentSubtle — which this used
