@@ -103,7 +103,9 @@ public partial class RealtimeFramingCard : UserControl
 
         // Nothing kept: the list's frame would read as an empty box to fill in, and there is nothing
         // on this page to fill it with — the sentence says where the button is instead.
+        // The hint explains a list; with no list, the one sentence in its place says it all.
         ListBorder.Visibility = presets.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        HintText.Visibility = presets.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         EmptyText.Visibility = presets.Count > 0 ? Visibility.Collapsed : Visibility.Visible;
     }
 

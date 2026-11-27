@@ -318,8 +318,8 @@
     <!-- 翻譯區域預設 card on the 即時翻譯 page: the block layouts kept per screen and window. Saved from
          the floating bar's save button, listed here — where a name can also be given to one. -->
     <sys:String x:Key="S.Realtime.Framings">保存した翻訳範囲</sys:String>
-    <sys:String x:Key="S.Realtime.FramingsHint">使うプリセットを選ぶと、次にリアルタイム翻訳を始めるときにその範囲が適用され、描き直す必要がありません。画面やウィンドウごとに選んだ範囲を覚え、同じ画面やウィンドウに複数保存できます。フローティングバーの「保存した翻訳範囲」の「今の範囲を保存」で別の範囲も保存できます。</sys:String>
-    <sys:String x:Key="S.Realtime.FramingsEmpty">保存した翻訳範囲はまだありません。範囲を選んでフローティングバーの「保存した翻訳範囲」から「今の範囲を保存」を押すと、次回から自動で適用されます。</sys:String>
+    <sys:String x:Key="S.Realtime.FramingsHint">翻訳を始めると、選んだ範囲が自動で適用されます。画面やウィンドウごとに複数保存できます。</sys:String>
+    <sys:String x:Key="S.Realtime.FramingsEmpty">保存した範囲はまだありません。範囲を選ぶときに、フローティングバーの「保存した翻訳範囲」から保存できます。</sys:String>
     <sys:String x:Key="S.Realtime.FramingScreenName">画面 · {0}×{1}</sys:String>
     <sys:String x:Key="S.Realtime.FramingsWindowUnknown">保存したウィンドウ</sys:String>
     <sys:String x:Key="S.Realtime.FramingBlockCount">翻訳ブロックを {0} 個保存</sys:String>

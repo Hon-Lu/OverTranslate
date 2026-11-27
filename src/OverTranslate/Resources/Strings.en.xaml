@@ -314,8 +314,8 @@ Actually used this time: {2}</sys:String>
     <!-- The 翻譯區域預設 card on the real-time page: the block layouts kept per screen and window.
          Saved from the floating bar's save button, listed here — where a name can also be given. -->
     <sys:String x:Key="S.Realtime.Framings">Saved block layouts</sys:String>
-    <sys:String x:Key="S.Realtime.FramingsHint">Pick a layout and the next real-time session starts with its blocks — the capture source follows it, so Select blocks opens right onto them. Each screen or window keeps its own pick and can hold several; Save current blocks under Saved block layouts on the floating bar keeps another.</sys:String>
-    <sys:String x:Key="S.Realtime.FramingsEmpty">No block layout saved yet. Frame the blocks, then choose Save current blocks under Saved block layouts on the floating bar, and the next session starts with them in place.</sys:String>
+    <sys:String x:Key="S.Realtime.FramingsHint">The selected layout is applied when translation starts. Each screen or window can keep several.</sys:String>
+    <sys:String x:Key="S.Realtime.FramingsEmpty">No layouts saved yet. While framing, save one from “Saved block layouts” on the floating bar.</sys:String>
     <sys:String x:Key="S.Realtime.FramingScreenName">Screen · {0}×{1}</sys:String>
     <sys:String x:Key="S.Realtime.FramingsWindowUnknown">Saved window</sys:String>
     <sys:String x:Key="S.Realtime.FramingBlockCount">{0} translation blocks kept</sys:String>

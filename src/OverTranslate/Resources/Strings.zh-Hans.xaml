@@ -314,8 +314,8 @@
     <!-- 翻譯區域預設 card on the 即時翻譯 page: the framings kept per screen and window. Saved from
          the floating bar's save button, listed here — where a name can also be given to one. -->
     <sys:String x:Key="S.Realtime.Framings">翻译区域预设</sys:String>
-    <sys:String x:Key="S.Realtime.FramingsHint">选取一个预设后，开始实时翻译时会直接套用它的区域；同一个屏幕或窗口可以保留多组，并各自记住选取的那一组。框选后在浮动窗口栏的“翻译区域预设”中点击“保存当前框选”可再保存一组。</sys:String>
-    <sys:String x:Key="S.Realtime.FramingsEmpty">还没有保存的翻译区域。框选后在浮动窗口栏的“翻译区域预设”中点击“保存当前框选”即可保存，下次开启会自动套用。</sys:String>
+    <sys:String x:Key="S.Realtime.FramingsHint">开始翻译时自动套用选取的预设。每个屏幕或窗口可各存多组。</sys:String>
+    <sys:String x:Key="S.Realtime.FramingsEmpty">尚未保存任何区域。框选时从浮动窗口栏的“翻译区域预设”保存即可。</sys:String>
     <sys:String x:Key="S.Realtime.FramingScreenName">屏幕 · {0}×{1}</sys:String>
     <sys:String x:Key="S.Realtime.FramingsWindowUnknown">已保存的窗口</sys:String>
     <sys:String x:Key="S.Realtime.FramingBlockCount">已保存 {0} 个翻译区块</sys:String>
