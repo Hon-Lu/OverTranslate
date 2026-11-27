@@ -383,6 +383,13 @@ internal sealed class OnnxOcrEngine : IOcrEngine
             //
             // Korean stays on its own model above because v6 carries no Hangul at all — measured
             // on its dictionary, 0 of 18,708 characters — so the one model cannot cover KO.
+            //
+            // FR, DE, ES, IT and PT are read here too rather than by a Latin language pack (#441).
+            // Its dictionary holds their letters (all but ¡ „ ‚ ẞ, which only drop an opening mark),
+            // and with the accents left unfolded it read them as well as latin_PP-OCRv5_rec_mobile:
+            // CER within 0.2 points either way on rendered text, and the same misread words on real
+            // Wikipedia pages. The pack recognised about a quarter faster, but this is the speed
+            // English is read at, and it costs no download and no model swap between EN and FR.
             _ => "cjk",
         };
 
@@ -1648,9 +1655,12 @@ internal sealed class OnnxOcrEngine : IOcrEngine
     internal static List<OcrTextBlock> ApplyBlockFilters(
         List<OcrTextBlock> converted, string normalizedLanguage, bool useCjkRenderMetrics, bool usesAutomaticLayout)
     {
-        // Every language, because an accented letter is a misread whichever script surrounds
-        // it, and it costs the whole line its translation rather than just one character.
-        converted = FoldBlockDiacritics(converted);
+        // Every language that does not write accented letters, because there an accented letter is
+        // a misread whichever script surrounds it, and it costs the whole line its translation
+        // rather than just one character. French, German, Spanish, Italian and Portuguese write
+        // them, and folding é to e there is the very damage this exists to prevent (#441).
+        if (!OcrLanguageRouter.KeepsLatinDiacritics(normalizedLanguage))
+            converted = FoldBlockDiacritics(converted);
 
         // Every language, and that is the change that let this run at all. It used to be a Latin-
         // pages-only rule, which made the recognised text depend on the source language picked;
@@ -1815,8 +1825,9 @@ internal sealed class OnnxOcrEngine : IOcrEngine
     // Folds accented Latin letters onto their plain form: "șong" -> "song".
     //
     // PP-OCRv6 carries ~200 diacritical characters so one model can serve 46 Latin-script
-    // languages. None of the languages this application reads (EN, ZH, ZH-HANT, JA, KO) use them,
-    // so when one appears in a reading it is a misread of the plain letter — and it does more
+    // languages. Of the languages this application reads, only FR, DE, ES, IT and PT use them, and
+    // those are not folded (see ApplyBlockFilters); under every other one, when one appears in a
+    // reading it is a misread of the plain letter — and it does more
     // damage than a wrong letter usually would, because the result is a word no translator knows.
     // Measured: "That kind of șong" (U+0219, Romanian s-with-comma) came back at 0.93 confidence,
     // far too sure to be caught by any score floor, and the line was translated as nonsense while

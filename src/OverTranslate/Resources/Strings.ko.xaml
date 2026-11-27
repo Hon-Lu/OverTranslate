@@ -108,7 +108,7 @@
     <sys:String x:Key="S.Error.OpenAiNoModel">모델 이름이 설정되지 않았습니다. 번역 서비스 설정에서 사용할 모델을 입력하세요.</sys:String>
     <sys:String x:Key="S.Error.UnknownError">알 수 없는 오류</sys:String>
     <sys:String x:Key="S.Error.NoErrorContent">오류 내용이 없습니다</sys:String>
-    <sys:String x:Key="S.Error.OcrUnsupportedLanguage">OCR은 현재 AUTO, EN, ZH, ZH-HANT, JA, KO, RU, UK만 지원합니다. ‘{0}’은(는) 아직 지원하지 않습니다.</sys:String>
+    <sys:String x:Key="S.Error.OcrUnsupportedLanguage">OCR은 현재 AUTO, EN, ZH, ZH-HANT, JA, KO, DE, ES, FR, IT, PT, RU, UK만 지원합니다. ‘{0}’은(는) 아직 지원하지 않습니다.</sys:String>
     <sys:String x:Key="S.Error.OcrSwapTimeout">OCR 모델을 바꾸려고 다른 인식이 끝나기를 기다렸으나 시간이 초과되었습니다.</sys:String>
     <sys:String x:Key="S.Error.OcrImageConvert">이미지를 ONNX OCR이 읽을 수 있는 형식으로 변환하지 못했습니다.</sys:String>
     <sys:String x:Key="S.Error.OcrModelMissing">OCR 모델 파일을 찾을 수 없습니다: {0}</sys:String>
@@ -971,9 +971,9 @@
     <sys:String x:Key="S.OcrPack.Download">다운로드</sys:String>
     <sys:String x:Key="S.OcrPack.Downloading">{0} 인식 모델 다운로드 중</sys:String>
     <sys:String x:Key="S.Settings.OcrPacks">인식 언어</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksBuiltIn">기본 포함</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksGeneral">범용 모델</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksDedicated">언어별 모델</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksListSeparator" xml:space="preserve">, </sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksReady">다운로드됨 · {0}</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksMissing">다운로드 안 됨 · {0}</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksDelete">삭제</sys:String>
     <sys:String x:Key="S.Settings.Models">인식 모델</sys:String>

@@ -23,8 +23,8 @@ public class OcrServiceTests
     }
 
     [Theory]
-    [InlineData("DE")]
-    [InlineData("FR")]
+    [InlineData("NL")]
+    [InlineData("PL")]
     public void UnsupportedLanguages_AreRejectedByRouter(string code)
     {
         Assert.False(OcrLanguageRouter.IsSupported(code));
@@ -33,8 +33,8 @@ public class OcrServiceTests
     [Fact]
     public void UnsupportedLanguageMessage_ContainsLanguageCode()
     {
-        var message = OcrLanguageRouter.GetUnsupportedLanguageMessage("de");
-        Assert.Contains("DE", message);
+        var message = OcrLanguageRouter.GetUnsupportedLanguageMessage("nl");
+        Assert.Contains("NL", message);
     }
 
     [Fact]

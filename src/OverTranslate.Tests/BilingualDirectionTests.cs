@@ -208,15 +208,42 @@ public class BilingualDirectionTests
     }
 
     /// <remarks>
-    /// Two Latin languages have nothing in the characters to separate them. Undecided is the honest
-    /// answer; the window translates into the first language and lets the engine settle it.
+    /// A word or two with no function word and no accented letter only one of the pair writes
+    /// carries nothing to separate two Latin languages. Undecided is the honest answer; the window
+    /// translates into the first language and lets the engine settle it.
     /// </remarks>
     [Fact]
-    public void TwoLatinLanguagesCannotBeSeparatedFromTheCharacters()
+    public void TwoLatinLanguages_AShortTextWithNoTell_IsUndecided()
     {
         Assert.Null(BilingualDirection.ResolveSource("Bonjour", English, French));
         Assert.Null(BilingualDirection.ResolveSource("Good morning", English, French));
+        Assert.Null(BilingualDirection.ResolveSource("chat", English, French));
     }
+
+    /// <remarks>#441: a sentence nearly always carries a function word or a letter one side writes.</remarks>
+    [Theory]
+    [InlineData("Voulez-vous sauvegarder la partie avant de quitter ?", "EN-US", "FR", "FR")]
+    [InlineData("Do you want to save the game before quitting?", "EN-US", "FR", "EN-US")]
+    [InlineData("Ça fait deux heures", "FR", "EN-US", "FR")]
+    [InlineData("Möchtest du das Spiel speichern?", "EN-US", "DE", "DE")]
+    [InlineData("¿Quieres guardar la partida?", "EN-US", "ES", "ES")]
+    [InlineData("Vuoi salvare la partita prima di uscire?", "EN-US", "IT", "IT")]
+    [InlineData("Você quer salvar o jogo antes de sair?", "EN-US", "PT-BR", "PT-BR")]
+    [InlineData("Ils se sont rencontrés à Montréal l'été dernier.", "ES", "FR", "FR")]
+    [InlineData("¿Dónde encontraste esta llave dorada?", "PT-BR", "ES", "ES")]
+    public void TwoLatinLanguages_ASentenceSaysWhichItIs(string text, string first, string second, string expected) =>
+        Assert.Equal(expected, BilingualDirection.ResolveSource(text, first, second));
+
+    /// <remarks>
+    /// A tell both languages share says nothing: 「de」 is French and Spanish, 「é」 in 「café」 French and
+    /// Portuguese. Languages with no hints listed are left to the engine as before.
+    /// </remarks>
+    [Theory]
+    [InlineData("de la", "FR", "ES")]
+    [InlineData("café", "FR", "PT-BR")]
+    [InlineData("Dit is een zin in het Nederlands.", "EN-US", "NL")]
+    public void TwoLatinLanguages_ASharedTellOrAnUnlistedLanguage_IsUndecided(string text, string first, string second) =>
+        Assert.Null(BilingualDirection.ResolveSource(text, first, second));
 
     /// <remarks>
     /// Kanji with no kana under 中文／日文 is the one pair where the kanji-only case really is

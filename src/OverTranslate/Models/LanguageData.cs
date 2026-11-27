@@ -173,6 +173,14 @@ public static class LanguageData
         new("ZH-HANT", "S.Lang.TraditionalChinese", "Traditional Chinese"),
         new("ZH",      "S.Lang.SimplifiedChinese",  "Simplified Chinese"),
 
+        // Read by the built-in model, which carries their accented letters; picking one keeps them
+        // rather than folding them away. See OcrLanguageRouter.KeepsLatinDiacritics.
+        new("DE",      "S.Lang.German",             "German"),
+        new("ES",      "S.Lang.Spanish",            "Spanish"),
+        new("FR",      "S.Lang.French",             "French"),
+        new("IT",      "S.Lang.Italian",            "Italian"),
+        new("PT",      "S.Lang.Portuguese",         "Portuguese"),
+
         // Language packs, Korean above included: listed like any other, and asked about when picked.
         // See OcrSourcePicker.
         new("RU",     "S.Lang.Russian",            "Russian"),

@@ -107,7 +107,7 @@
     <sys:String x:Key="S.Error.OpenAiNoModel">No model name is set. Enter the model to use in the translation service settings.</sys:String>
     <sys:String x:Key="S.Error.UnknownError">Unknown error</sys:String>
     <sys:String x:Key="S.Error.NoErrorContent">No error details provided</sys:String>
-    <sys:String x:Key="S.Error.OcrUnsupportedLanguage">OCR currently supports AUTO, EN, ZH, ZH-HANT, JA, KO, RU and UK only; "{0}" is not supported yet.</sys:String>
+    <sys:String x:Key="S.Error.OcrUnsupportedLanguage">OCR currently supports AUTO, EN, ZH, ZH-HANT, JA, KO, DE, ES, FR, IT, PT, RU and UK only; "{0}" is not supported yet.</sys:String>
     <sys:String x:Key="S.Error.OcrSwapTimeout">Timed out waiting for other recognition to finish before switching OCR models.</sys:String>
     <sys:String x:Key="S.Error.OcrImageConvert">Could not convert the image into a format the ONNX OCR can read.</sys:String>
     <sys:String x:Key="S.Error.OcrModelMissing">OCR model file not found: {0}</sys:String>
@@ -969,9 +969,9 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.OcrPack.Download">Download</sys:String>
     <sys:String x:Key="S.OcrPack.Downloading">Downloading the {0} recognition model</sys:String>
     <sys:String x:Key="S.Settings.OcrPacks">Recognition languages</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksBuiltIn">Built in</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksGeneral">General model</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksDedicated">Language-specific models</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksListSeparator" xml:space="preserve">, </sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksReady">Downloaded · {0}</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksMissing">Not downloaded · {0}</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksDelete">Delete</sys:String>
     <sys:String x:Key="S.Settings.Models">Recognition models</sys:String>

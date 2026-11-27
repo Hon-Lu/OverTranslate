@@ -192,7 +192,7 @@ public sealed class OcrLanguagePackTests : IDisposable
     {
         var codes = LanguageData.OcrSourceLanguages.Select(language => language.Code).ToList();
 
-        Assert.Equal(["AUTO", "EN", "JA", "KO", "ZH-HANT", "ZH", "RU", "UK"], codes);
+        Assert.Equal(["AUTO", "EN", "JA", "KO", "ZH-HANT", "ZH", "DE", "ES", "FR", "IT", "PT", "RU", "UK"], codes);
     }
 
     [Theory]

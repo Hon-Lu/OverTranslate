@@ -22,7 +22,7 @@ public class RealtimeLanguageSwitchTests
     {
         var codes = RealtimeLanguageMenuItems.For(RealtimeLanguageMenuKind.Source, "EN").Select(e => e.Code);
 
-        Assert.Equal(["EN", "JA", "KO", "ZH-HANT", "ZH", "RU", "UK"], codes);
+        Assert.Equal(["EN", "JA", "KO", "ZH-HANT", "ZH", "DE", "ES", "FR", "IT", "PT", "RU", "UK"], codes);
     }
 
     [Fact]

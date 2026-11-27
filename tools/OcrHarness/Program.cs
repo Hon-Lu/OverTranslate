@@ -382,6 +382,9 @@ if (args[0] == "--fallback-test")
     return 0;
 }
 
+if (args[0] == "--bilingual") return await BilingualProbe.Run(args[1..], http);
+if (args[0] == "--xlate-source") return await BilingualProbe.TranslateFrom(args[1..], http);
+
 // Translate one line given on the command line. For telling an OCR problem from a translation
 // one: when a word goes missing on screen, this says whether the recogniser dropped it or the
 // translator did.

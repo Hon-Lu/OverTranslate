@@ -108,7 +108,7 @@
     <sys:String x:Key="S.Error.OpenAiNoModel">モデル名が設定されていません。翻訳サービス設定で使用するモデルを入力してください。</sys:String>
     <sys:String x:Key="S.Error.UnknownError">不明なエラー</sys:String>
     <sys:String x:Key="S.Error.NoErrorContent">エラーの詳細はありません</sys:String>
-    <sys:String x:Key="S.Error.OcrUnsupportedLanguage">OCR が対応しているのは AUTO、EN、ZH、ZH-HANT、JA、KO、RU、UK のみです。「{0}」はまだ対応していません。</sys:String>
+    <sys:String x:Key="S.Error.OcrUnsupportedLanguage">OCR が対応しているのは AUTO、EN、ZH、ZH-HANT、JA、KO、DE、ES、FR、IT、PT、RU、UK のみです。「{0}」はまだ対応していません。</sys:String>
     <sys:String x:Key="S.Error.OcrSwapTimeout">OCR モデルの切り替えのため他の認識の完了を待ちましたが、タイムアウトしました。</sys:String>
     <sys:String x:Key="S.Error.OcrImageConvert">画像を ONNX OCR が読める形式に変換できませんでした。</sys:String>
     <sys:String x:Key="S.Error.OcrModelMissing">OCR モデルファイルが見つかりません：{0}</sys:String>
@@ -971,9 +971,9 @@
     <sys:String x:Key="S.OcrPack.Download">ダウンロード</sys:String>
     <sys:String x:Key="S.OcrPack.Downloading">{0}の認識モデルをダウンロード中</sys:String>
     <sys:String x:Key="S.Settings.OcrPacks">認識言語</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksBuiltIn">内蔵</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksGeneral">汎用モデル</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksDedicated">言語別モデル</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksListSeparator">、</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksReady">ダウンロード済み · {0}</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksMissing">未ダウンロード · {0}</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksDelete">削除</sys:String>
     <sys:String x:Key="S.Settings.Models">認識モデル</sys:String>
