@@ -76,18 +76,45 @@ internal static class RealtimeFramingDisplay
         };
 
     /// <summary>
-    /// The name a preset carries while the user has not given it one — 螢幕 1 · 2560×1440, the
-    /// window's title, and （2）, （3） on a target's second and later presets.
+    /// The name a preset carries while the user has not given it one: 預設 N, N its number among its
+    /// target's presets.
     /// </summary>
-    public static string AutomaticName(RealtimeFramingPreset preset)
+    /// <remarks>
+    /// Short rather than the target's own name: everywhere a preset is named, the target is already
+    /// said beside it — under the bar's list title, over the page's list, in the line under a row of
+    /// 其他螢幕或視窗 — and a window title repeated in every row read as the same row over and over.
+    /// </remarks>
+    public static string AutomaticName(RealtimeFramingPreset preset) =>
+        LocalizationService.Format("S.Realtime.FramingAutoName", Math.Max(1, preset.Ordinal));
+
+    /// <summary>Whether <paramref name="preset"/> goes by <see cref="AutomaticName"/>, not one the user gave.</summary>
+    public static bool IsAutomaticallyNamed(RealtimeFramingPreset preset) =>
+        (preset.Name ?? "").Trim().Length == 0;
+
+    /// <summary>
+    /// The target as a sentence names it in passing: 螢幕 1, or the window's title — without the
+    /// resolution or the program <see cref="Caption"/> adds.
+    /// </summary>
+    public static string ShortTargetName(RealtimeFramingPreset preset)
     {
-        var name = TargetName(preset);
-        return preset.Ordinal > 1
-            ? LocalizationService.Format("S.Realtime.FramingNumbered", name, preset.Ordinal)
-            : name;
+        if (preset.IsForWindow) return TargetName(preset);
+
+        var screens = Screen.AllScreens;
+        int index = Array.FindIndex(screens, screen => screen.DeviceName == preset.ScreenDeviceName);
+        return index >= 0
+            ? LocalizationService.Format("S.Realtime.FramingScreenShort", index + 1)
+            : LocalizationService.Format("S.Realtime.FramingScreenName", preset.Screen.Width, preset.Screen.Height);
     }
 
-    /// <summary>The target's own name, before the numbering a second preset of it takes.</summary>
+    /// <summary>
+    /// The question 刪除 asks: the name, and — for a 預設 N, which many targets share — whose it is.
+    /// </summary>
+    public static string DeleteQuestion(RealtimeFramingPreset preset) =>
+        IsAutomaticallyNamed(preset)
+            ? LocalizationService.Format("S.Realtime.FramingDeleteConfirmTarget", Name(preset), ShortTargetName(preset))
+            : LocalizationService.Format("S.Realtime.FramingDeleteConfirm", Name(preset));
+
+    /// <summary>The target's own name: the monitor as the picker names it, or the window's title.</summary>
     public static string TargetName(RealtimeFramingPreset preset)
     {
         if (preset.IsForWindow)
