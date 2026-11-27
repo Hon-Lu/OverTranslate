@@ -950,9 +950,9 @@
     <sys:String x:Key="S.OcrPack.Download">ダウンロード</sys:String>
     <sys:String x:Key="S.OcrPack.Downloading">{0}の認識モデルをダウンロード中</sys:String>
     <sys:String x:Key="S.Settings.OcrPacks">認識言語</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksBuiltIn">内蔵</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksGeneral">汎用モデル</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksDedicated">言語別モデル</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksListSeparator">、</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksReady">ダウンロード済み · {0}</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksMissing">未ダウンロード · {0}</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksDelete">削除</sys:String>
     <sys:String x:Key="S.Settings.Models">認識モデル</sys:String>

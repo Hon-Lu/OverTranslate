@@ -946,9 +946,9 @@
     <sys:String x:Key="S.OcrPack.Download">下载</sys:String>
     <sys:String x:Key="S.OcrPack.Downloading">正在下载{0}识别模型</sys:String>
     <sys:String x:Key="S.Settings.OcrPacks">识别语言</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksBuiltIn">内置</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksGeneral">通用模型</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksDedicated">语言专用模型</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksListSeparator">、</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksReady">已下载 · {0}</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksMissing">未下载 · {0}</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksDelete">删除</sys:String>
     <sys:String x:Key="S.Settings.Models">识别模型</sys:String>

@@ -948,9 +948,9 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.OcrPack.Download">Download</sys:String>
     <sys:String x:Key="S.OcrPack.Downloading">Downloading the {0} recognition model</sys:String>
     <sys:String x:Key="S.Settings.OcrPacks">Recognition languages</sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksBuiltIn">Built in</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksGeneral">General model</sys:String>
+    <sys:String x:Key="S.Settings.OcrPacksDedicated">Language-specific models</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksListSeparator" xml:space="preserve">, </sys:String>
-    <sys:String x:Key="S.Settings.OcrPacksReady">Downloaded · {0}</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksMissing">Not downloaded · {0}</sys:String>
     <sys:String x:Key="S.Settings.OcrPacksDelete">Delete</sys:String>
     <sys:String x:Key="S.Settings.Models">Recognition models</sys:String>

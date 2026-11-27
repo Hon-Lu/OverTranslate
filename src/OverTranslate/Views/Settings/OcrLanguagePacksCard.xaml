@@ -1,9 +1,10 @@
 <UserControl x:Class="OverTranslate.Views.Settings.OcrLanguagePacksCard"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- The recognition languages beside the manga models in 辨識模型: the built-in ones first, so it is
-         clear why the rest are downloads, then one line per language pack with what it takes and the
-         one thing that can be done with it now. No card of its own: the section around it is the card. -->
+    <!-- The recognition languages beside the manga models in 辨識模型, in two groups: 通用模型, the
+         languages the shipped model reads, as tags; then 語言專用模型, one row per language pack with
+         its size and the one thing that can be done with it now. No card of its own: the section
+         around it is the card. -->
     <StackPanel>
         <Grid Margin="0,0,0,2">
             <Grid.ColumnDefinitions>
