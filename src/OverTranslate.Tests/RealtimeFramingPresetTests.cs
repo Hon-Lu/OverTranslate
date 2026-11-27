@@ -968,7 +968,7 @@ public class RealtimeFramingPresetTests
     {
         var presets = new[]
         {
-            Make("a", blocks: new Rectangle(10, 10, 100, 20)),
+            Make("a", selected: true, blocks: new Rectangle(10, 10, 100, 20)),
             Make("b", blocks: new Rectangle(50, 50, 100, 20)),
         };
 
@@ -984,7 +984,7 @@ public class RealtimeFramingPresetTests
     [Fact]
     public void TheList_AnAppliedPresetChangedSince_IsModified_AndANewOneCanStillBeSaved()
     {
-        var presets = new[] { Make("a", blocks: new Rectangle(10, 10, 100, 20)) };
+        var presets = new[] { Make("a", selected: true, blocks: new Rectangle(10, 10, 100, 20)) };
         RealtimeBlockPlacement[] moved = [Block(12, 10, 100, 20)];
 
         var list = RealtimeFramingStore.ListFor(presets, ScreenTarget(), moved, "a");
@@ -1233,7 +1233,7 @@ public class RealtimeFramingPresetTests
     [Fact]
     public void Skipped_TheListTicksNoneAndNoPreset()
     {
-        var presets = new[] { Make("a", blocks: new Rectangle(10, 10, 100, 20)) };
+        var presets = new[] { Make("a", selected: true, blocks: new Rectangle(10, 10, 100, 20)) };
         var target = ScreenTarget();
 
         var list = RealtimeFramingStore.ListFor(
@@ -1377,6 +1377,96 @@ public class RealtimeFramingPresetTests
 
         // Another target's selection is not touched.
         Assert.Equal("game", RealtimeFramingStore.Match(after, WindowTarget("game", "Game"), [])!.Id);
+    }
+
+    [Fact]
+    public void Deleting_TheSelectedPreset_IsNoneChosen_TheListTicksNone()
+    {
+        var a = Make("a", blocks: new Rectangle(10, 10, 100, 20));
+        var b = Make("b", selected: true, blocks: new Rectangle(0, 0, 50, 20));
+        var target = ScreenTarget();
+
+        Assert.False(RealtimeFramingStore.ChoseNone([a, b], target, []));
+
+        var after = RealtimeFramingStore.ForgetInto([a, b], "b");
+        Assert.True(RealtimeFramingStore.ChoseNone(after, target, []));
+
+        // The tick is on 不套用, so a preset whose blocks are on the screen is not it.
+        var list = RealtimeFramingStore.ListFor(after, target, [Block(10, 10, 100, 20)], "a");
+        Assert.True(list.Skipped);
+        Assert.Equal(RealtimeFramingStore.RowState.Ready, Assert.Single(list.Rows).State);
+    }
+
+    [Fact]
+    public void NoneChosen_IsOnlyForATargetWithSomethingKeptAtItsSize()
+    {
+        var target = ScreenTarget();
+
+        Assert.False(RealtimeFramingStore.ChoseNone([], target, []));
+        Assert.False(RealtimeFramingStore.ChoseNone(
+            [Make("small", screen: new Rectangle(0, 0, 1280, 720), selected: true)], target, []));
+        Assert.True(RealtimeFramingStore.ChoseNone([], target, RealtimeFramingStore.SkipInto([], target)));
+    }
+
+    // ── What a session opens on: the choice, with this run's unsaved changes to it ──────────────
+
+    [Fact]
+    public void Remembered_ChangesToTheSelectedPreset_AreKept()
+    {
+        var presets = new[] { Make("a", selected: true), Make("b") };
+
+        Assert.True(RealtimeFramingStore.KeepsRemembered(presets, ScreenTarget(), [], "a"));
+    }
+
+    [Fact]
+    public void Remembered_GoWhenTheSelectedPresetIsDeleted_EvenAfterTheSessionEnded()
+    {
+        var presets = new[] { Make("a", selected: true), Make("b") };
+
+        var after = RealtimeFramingStore.ForgetInto(presets, "a");
+
+        Assert.False(RealtimeFramingStore.KeepsRemembered(after, ScreenTarget(), [], "a"));
+    }
+
+    [Fact]
+    public void Remembered_StayWhenAnotherPresetIsDeleted()
+    {
+        var presets = new[] { Make("a", selected: true), Make("b") };
+
+        var after = RealtimeFramingStore.ForgetInto(presets, "b");
+
+        Assert.True(RealtimeFramingStore.KeepsRemembered(after, ScreenTarget(), [], "a"));
+    }
+
+    [Fact]
+    public void Remembered_GoWhenNoneOrAnotherIsChosen()
+    {
+        var presets = new[] { Make("a", selected: true), Make("b") };
+        var target = ScreenTarget();
+
+        Assert.False(RealtimeFramingStore.KeepsRemembered(presets, target, RealtimeFramingStore.SkipInto([], target), "a"));
+        Assert.False(RealtimeFramingStore.KeepsRemembered(RealtimeFramingStore.SelectInto(presets, "b"), target, [], "a"));
+    }
+
+    [Fact]
+    public void Remembered_BlocksDrawnOverNone_AreKept_UntilAPresetIsPicked()
+    {
+        var presets = new[] { Make("a", selected: true) };
+        var target = ScreenTarget();
+        var skipped = RealtimeFramingStore.SkipInto([], target);
+
+        Assert.True(RealtimeFramingStore.KeepsRemembered(presets, target, skipped, null));
+        Assert.False(RealtimeFramingStore.KeepsRemembered(presets, target, [], null));
+    }
+
+    [Fact]
+    public void Remembered_OnATargetWithNothingKept_AreKeptAsBefore()
+    {
+        Assert.True(RealtimeFramingStore.KeepsRemembered([], ScreenTarget(), [], null));
+
+        // Kept for this monitor at another resolution only: still nothing to choose at this size.
+        Assert.True(RealtimeFramingStore.KeepsRemembered(
+            [Make("small", screen: new Rectangle(0, 0, 1280, 720), selected: true)], ScreenTarget(), [], null));
     }
 
     private sealed class TempExe : IDisposable

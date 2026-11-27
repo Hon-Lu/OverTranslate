@@ -600,11 +600,11 @@ internal sealed class RealtimeSessionController
     /// but could not be placed — that preset, so the bar can say why.
     /// </summary>
     /// <remarks>
-    /// The remembered blocks win over a preset: they are the user's own last answer, including the
-    /// nudges they made to it after saving, and they were drawn on this same screen and window. A
-    /// preset is what is left when nothing is remembered, which is every launch after the one it was
-    /// saved in — the one the user picked for that target, or the newest it has — see
-    /// <see cref="RealtimeFramingStore.Match"/>.
+    /// What is chosen for the target — a preset, or 不套用 — with the changes made to it in this run
+    /// and not saved: the remembered blocks are those changes, drawn on this same screen and window,
+    /// and they count only while what they were made to is still the choice (see
+    /// <see cref="RealtimeFramingStore.KeepsRemembered"/>). Otherwise, and on every launch after the
+    /// one a preset was saved in, the selected preset — see <see cref="RealtimeFramingStore.Match(RealtimeFramingStore.Target)"/>.
     /// </remarks>
     private List<RealtimeBlockPlacement> InitialBlocks(
         out Models.RealtimeFramingPreset? applied,
@@ -616,7 +616,10 @@ internal sealed class RealtimeSessionController
 
         // Remembered blocks that followed their window partly off this session's screen are not
         // offered back: the framing layer covers this screen only, so they could not be reached.
-        if (_remembered is { } kept && RealtimeFramingStore.SameTarget(kept.Target, _target))
+        var settings = SettingsService.Instance.Current.Realtime;
+        if (_remembered is { } kept && RealtimeFramingStore.SameTarget(kept.Target, _target) &&
+            RealtimeFramingStore.KeepsRemembered(
+                settings.FramingPresets, _target, settings.FramingSkippedTargets, kept.PresetId))
         {
             var followed = RealtimeFramingStore.FollowWindow(kept.Target, _target, kept.Blocks);
             if (RealtimeFramingStore.OnScreen(followed, _target.Screen))
@@ -882,7 +885,7 @@ internal sealed class RealtimeSessionController
         if (_blocks.SequenceEqual(blocks))
         {
             _appliedFramingId = preset.Id;
-            if (RealtimeFramingStore.IsSkipped(target))
+            if (RealtimeFramingStore.ChoseNone(target))
             {
                 RealtimeFramingStore.Select(id, target);
                 control.ShowMessage(LocalizationService.Format(
@@ -939,13 +942,16 @@ internal sealed class RealtimeSessionController
     }
 
     /// <summary>
-    /// The list's 不套用: this screen or window opens empty from the next session on, until one of its
-    /// framings is picked or saved.
+    /// The list's 不套用, a preset with no blocks: the blocks on the screen are cleared, and this
+    /// screen or window opens empty from now on, until one of its framings is picked or saved.
     /// </summary>
     /// <remarks>
-    /// About the next session only. The blocks on the screen now stay as they are — taking them away
-    /// would end a sitting that is translating, over a choice about the next one — and so does the
-    /// rest of this run's memory of them (see InitialBlocks).
+    /// <para>The same as picking any other row. While translating there is nothing left to read, so
+    /// the sitting goes back to framing — on an empty screen, ready to be framed again — rather than
+    /// starting again on nothing; a pause has nothing left to keep.</para>
+    ///
+    /// <para>Blocks no framing keeps are lost, and the bar says so in the same sentence. What this run
+    /// remembered of them goes too: the next session opens on 不套用 (see InitialBlocks).</para>
     /// </remarks>
     public void SkipFraming()
     {
@@ -953,14 +959,34 @@ internal sealed class RealtimeSessionController
         try
         {
             var target = SessionTarget;
+            if (RealtimeFramingStore.ChoseNone(target) && _blocks.Count == 0) return;
+
+            bool discarding = RealtimeFramingStore.HasUnsavedChanges(
+                SettingsService.Instance.Current.Realtime.FramingPresets, target, _blocks);
+
+            _target = target;
+            _remembered = null;
+            _appliedFramingId = null;
+            if (_edit is { } edit)
+            {
+                edit.SetBlocks([]);
+            }
+            else if (IsTranslating)
+            {
+                _blocks = [];
+                EnterEditMode();
+            }
+
             RealtimeFramingStore.Skip(target);
-            control.ShowMessage(LocalizationService.Get("S.Realtime.FramingSkipChosen"));
+            control.ShowMessage(LocalizationService.Get(
+                discarding ? "S.Realtime.FramingClearedDiscarded" : "S.Realtime.FramingCleared"));
             control.RefreshFramings();
-            Log.Info("Realtime framing: no preset for {Target} from the next session on", target.Key);
+            Log.Info("Realtime framing: 不套用 for {Target} (discarded={Discarded}, translating={Translating})",
+                target.Key, discarding, IsTranslating);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Could not store the realtime framing choice");
+            Log.Error(ex, "Could not clear the realtime framing");
         }
     }
 

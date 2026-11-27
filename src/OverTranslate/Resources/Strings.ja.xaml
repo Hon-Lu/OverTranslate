@@ -353,7 +353,8 @@
     <sys:String x:Key="S.Realtime.FramingUpdated">「{0}」を更新しました</sys:String>
     <sys:String x:Key="S.Realtime.FramingRestored">「{0}」に戻しました</sys:String>
     <sys:String x:Key="S.Realtime.FramingNone">適用しない</sys:String>
-    <sys:String x:Key="S.Realtime.FramingSkipChosen">次回は保存した範囲を適用せずに開始します</sys:String>
+    <sys:String x:Key="S.Realtime.FramingCleared">翻訳範囲をクリアしました</sys:String>
+    <sys:String x:Key="S.Realtime.FramingClearedDiscarded">翻訳範囲をクリアしました。保存していない変更は破棄しました</sys:String>
     <sys:String x:Key="S.Realtime.FramingAppliedDiscarded">「{0}」を適用しました。保存していない変更は破棄しました</sys:String>
     <sys:String x:Key="S.Realtime.FramingBlocksShort">ブロック {0} 個</sys:String>
     <sys:String x:Key="S.Realtime.FramingScreenSizeDiffers">今の画面サイズと異なります（{0}×{1}）</sys:String>

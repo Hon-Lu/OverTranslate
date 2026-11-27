@@ -266,8 +266,8 @@ public class RealtimeSettings
     /// <see cref="RealtimeFramingPreset.TargetKey"/> — which open empty whatever is kept for them.
     /// </summary>
     /// <remarks>
-    /// Beside the presets rather than written as all of a target's presets unselected, which already
-    /// means "never picked, open on the newest". Ended for a target by picking or saving one of its
+    /// Beside the presets rather than written as all of a target's presets unselected, so the one
+    /// that was selected keeps its mark; a deleted selection reads as 不套用 too. Ended for a target by picking or saving one of its
     /// presets; a key whose presets have all been deleted does no harm, as there is nothing to apply.
     /// Most recent first, and no more than <see cref="MaxFramingSkipped"/>.
     /// </remarks>

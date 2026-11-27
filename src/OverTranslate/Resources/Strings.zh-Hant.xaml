@@ -359,7 +359,8 @@
     <sys:String x:Key="S.Realtime.FramingUpdated">已更新「{0}」</sys:String>
     <sys:String x:Key="S.Realtime.FramingRestored">已還原「{0}」</sys:String>
     <sys:String x:Key="S.Realtime.FramingNone">不套用</sys:String>
-    <sys:String x:Key="S.Realtime.FramingSkipChosen">下次開始時不套用預設</sys:String>
+    <sys:String x:Key="S.Realtime.FramingCleared">已清空翻譯區域</sys:String>
+    <sys:String x:Key="S.Realtime.FramingClearedDiscarded">已清空翻譯區域，未儲存的修改已捨棄</sys:String>
     <sys:String x:Key="S.Realtime.FramingAppliedDiscarded">已套用「{0}」，未儲存的修改已捨棄</sys:String>
     <sys:String x:Key="S.Realtime.FramingBlocksShort">{0} 個區塊</sys:String>
     <sys:String x:Key="S.Realtime.FramingScreenSizeDiffers">與目前螢幕大小不同（{0}×{1}）</sys:String>

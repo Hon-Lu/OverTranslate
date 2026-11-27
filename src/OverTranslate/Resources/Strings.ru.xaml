@@ -346,7 +346,8 @@
     <sys:String x:Key="S.Realtime.FramingUpdated">«{0}» обновлены</sys:String>
     <sys:String x:Key="S.Realtime.FramingRestored">Возвращены «{0}»</sys:String>
     <sys:String x:Key="S.Realtime.FramingNone">Не применять</sys:String>
-    <sys:String x:Key="S.Realtime.FramingSkipChosen">В следующий раз область не применяется</sys:String>
+    <sys:String x:Key="S.Realtime.FramingCleared">Области перевода очищены</sys:String>
+    <sys:String x:Key="S.Realtime.FramingClearedDiscarded">Области перевода очищены, несохранённые изменения отброшены</sys:String>
     <sys:String x:Key="S.Realtime.FramingAppliedDiscarded">Применены «{0}», несохранённые изменения отброшены</sys:String>
     <sys:String x:Key="S.Realtime.FramingBlocksShort">Блоков: {0}</sys:String>
     <sys:String x:Key="S.Realtime.FramingScreenSizeDiffers">Не совпадает с экраном ({0}×{1})</sys:String>

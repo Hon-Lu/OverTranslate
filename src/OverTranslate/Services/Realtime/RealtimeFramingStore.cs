@@ -185,6 +185,46 @@ internal static class RealtimeFramingStore
         skipped is not null && skipped.Contains(target.Key);
 
     /// <summary>
+    /// Whether 不套用 is what <paramref name="target"/> has chosen: the user picked it, or the
+    /// selected preset was deleted. Either way it opens empty, and the bar's list ticks 不套用.
+    /// </summary>
+    public static bool ChoseNone(Target target) =>
+        ChoseNone(Realtime.FramingPresets, target, Realtime.FramingSkippedTargets);
+
+    /// <summary><see cref="ChoseNone(Target)"/> over a list rather than the settings file.</summary>
+    /// <remarks>
+    /// A target with nothing kept for it at its size has no 不套用 to choose: it opens empty because
+    /// there is nothing, not because it was asked to.
+    /// </remarks>
+    public static bool ChoseNone(
+        IReadOnlyList<RealtimeFramingPreset> presets, Target target, IReadOnlyCollection<string>? skipped) =>
+        IsSkipped(skipped, target) ||
+        (presets.Any(preset => IsFor(preset, target)) && Match(presets, target) is null);
+
+    /// <summary>
+    /// Whether blocks remembered from earlier in this run, last put on the screen from
+    /// <paramref name="rememberedId"/> (null: 不套用, or drawn on a target with nothing kept), are
+    /// still what <paramref name="target"/> opens on.
+    /// </summary>
+    /// <remarks>
+    /// <para>A session opens on what is chosen for the target — a preset or 不套用 — with the changes
+    /// made to it in this run and not saved. The remembered blocks are those changes, so they count
+    /// only while the choice they were made to is still the choice: once the selected preset is
+    /// deleted, or 不套用 or another preset is chosen, the next session opens on the new choice.</para>
+    ///
+    /// <para>A selected preset that cannot be placed — its window reaches past the screen — opens
+    /// empty, as 不套用 does, so blocks drawn over that are still the user's.</para>
+    /// </remarks>
+    public static bool KeepsRemembered(
+        IReadOnlyList<RealtimeFramingPreset> presets, Target target, IReadOnlyCollection<string>? skipped,
+        string? rememberedId)
+    {
+        var chosen = Match(presets, target, skipped);
+        var chosenId = chosen is not null && Placements(chosen, target).Count > 0 ? chosen.Id : null;
+        return rememberedId == chosenId;
+    }
+
+    /// <summary>
     /// Every preset kept for <paramref name="target"/>, newest first — what the framing bar's
     /// 翻譯區域預設 lists for the screen or window it is framing over.
     /// </summary>
@@ -552,17 +592,17 @@ internal static class RealtimeFramingStore
     /// and they have changed since. The save row says <see cref="SaveState.Same"/> for the same
     /// match: a second preset with the same blocks is never kept.</para>
     ///
-    /// <para>Where the user chose 不套用 for this target (<paramref name="skipped"/>), that row is
-    /// the ticked one and no preset row is: the tick says what the target opens on, and one list has
-    /// one. A preset whose blocks are on the screen is then an ordinary row, which pressing selects
-    /// again.</para>
+    /// <para>Where 不套用 is the target's choice (<see cref="ChoseNone(IReadOnlyList{RealtimeFramingPreset}, Target, IReadOnlyCollection{string}?)"/>),
+    /// that row is the ticked one and no preset row is: the tick says what the target opens on, and
+    /// one list has one. A preset whose blocks are on the screen is then an ordinary row, which
+    /// pressing selects again.</para>
     /// </remarks>
     public static FramingList ListFor(
         IReadOnlyList<RealtimeFramingPreset> presets, Target target,
         IReadOnlyList<RealtimeBlockPlacement> blocks, string? appliedId,
         IReadOnlyCollection<string>? skipped = null)
     {
-        bool skip = IsSkipped(skipped, target);
+        bool skip = ChoseNone(presets, target, skipped);
         var stored = Stored(blocks, target);
         var usable = new List<FramingRow>();
         var unusable = new List<FramingRow>();
@@ -648,13 +688,13 @@ internal static class RealtimeFramingStore
     }
 
     /// <summary>
-    /// The list's 不套用: <paramref name="target"/> opens empty from the next session on, whatever
+    /// The list's 不套用 — a preset with no blocks: <paramref name="target"/> opens empty, whatever
     /// is kept for it, until a preset of it is picked or saved.
     /// </summary>
     /// <remarks>
-    /// Remembered beside the presets rather than as every preset unselected: the bar's list ticks
-    /// 不套用 for this, and a selection deleted from the page is not the user choosing 不套用 —
-    /// though both open empty.
+    /// Remembered beside the presets rather than as every preset unselected, so the preset that was
+    /// selected is still marked when another is picked back. A selection deleted from the page reads
+    /// as 不套用 too — see <see cref="ChoseNone(Target)"/>.
     /// </remarks>
     public static void Skip(Target target)
     {
@@ -699,7 +739,7 @@ internal static class RealtimeFramingStore
 
     /// <summary>
     /// Drops the preset <paramref name="id"/>, the card's 刪除. Nothing else is touched: a target
-    /// that loses its selected preset is left with none, and opens empty — see <see cref="Match"/>.
+    /// that loses its selected preset is left with none, which is 不套用 — see <see cref="ChoseNone(Target)"/>.
     /// </summary>
     /// <returns>False when no preset went by that id.</returns>
     public static bool Forget(string id)

@@ -156,7 +156,7 @@ internal partial class RealtimeFramingPanel : Window
         // 不套用 heads the list only when there is something not to apply: with nothing kept for this
         // monitor or application the target opens empty anyway, and a lone ticked 不套用 over an
         // empty list would read as a choice the user had made.
-        if (any) RowsHost.Children.Add(SkipRow(list.Skipped));
+        if (any) RowsHost.Children.Add(SkipRow(list.Skipped, list.Save != RealtimeFramingStore.SaveState.NoBlocks));
         foreach (var row in list.Rows) RowsHost.Children.Add(Row(row, target));
 
         RowsScroll.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
@@ -253,10 +253,11 @@ internal partial class RealtimeFramingPanel : Window
     }
 
     /// <summary>
-    /// 不套用, at the top of the list: the target opens empty from the next session on. Ticked when
-    /// it is the choice, as a framing's row is; pressing it otherwise makes it the choice.
+    /// 不套用, at the top of the list: a framing with no blocks, which pressing clears the screen to and
+    /// the target opens on from then on. Ticked when it is the choice, as a framing's row is, and
+    /// still pressable while blocks have been drawn over it since.
     /// </summary>
-    private FrameworkElement SkipRow(bool chosen)
+    private FrameworkElement SkipRow(bool chosen, bool blocksOnScreen)
     {
         // An empty frame where a framing's thumbnail is: no blocks.
         var empty = new Border
@@ -287,13 +288,16 @@ internal partial class RealtimeFramingPanel : Window
         Grid.SetColumn(label, 1);
         grid.Children.Add(label);
 
-        FrameworkElement element;
         if (chosen)
         {
             var check = Tick();
             Grid.SetColumn(check, 2);
             grid.Children.Add(check);
+        }
 
+        FrameworkElement element;
+        if (chosen && !blocksOnScreen)
+        {
             var border = new Border { Child = grid };
             border.SetResourceReference(StyleProperty, "FramingStaticRow");
             element = border;
