@@ -94,6 +94,61 @@ public class RealtimeTranslationPanelTests(ITestOutputHelper output)
         });
     }
 
+    // A language pack is for reading the source: translating into Korean or Russian needs none, so
+    // the target column neither marks those rows nor holds a pick back for a download.
+    [Fact]
+    public void OnlyTheSourceColumn_MarksLanguagesThatNeedAPack()
+    {
+        OnUiThread(() =>
+        {
+            var panel = Build("zh-Hant", TranslationProvider.Google, "JA", "ZH-HANT");
+
+            Assert.All(Rows(panel, "TargetRows"), row => Assert.Null(PackHintOf(row)));
+            var packRows = Rows(panel, "SourceRows").Where(r => ((RealtimeLanguageEntry)r.Tag).Language.Pack is not null).ToList();
+            Assert.NotEmpty(packRows);
+            Assert.All(packRows, row => Assert.NotNull(PackHintOf(row)));
+            panel.Close();
+        });
+    }
+
+    [Fact]
+    public void PickingATargetLanguageWithAPack_TakesEffectAtOnce()
+    {
+        OnUiThread(() =>
+        {
+            var panel = Build("zh-Hant", TranslationProvider.Google, "JA", "ZH-HANT");
+            var picked = new List<(RealtimeLanguageKind Kind, string Code)>();
+            panel.LanguagePicked += (_, pick) => picked.Add(pick);
+
+            foreach (var code in new[] { "KO", "RU", "UK" })
+            {
+                var row = Rows(panel, "TargetRows").Single(r => ((RealtimeLanguageEntry)r.Tag).Code == code);
+                Assert.NotNull(((RealtimeLanguageEntry)row.Tag).Language.Pack);
+                row.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+            }
+
+            Assert.Equal([(RealtimeLanguageKind.Target, "KO"), (RealtimeLanguageKind.Target, "RU"), (RealtimeLanguageKind.Target, "UK")], picked);
+            panel.Close();
+        });
+    }
+
+    // The source column still asks first, whatever state the packs are in on this machine.
+    [Fact]
+    public void ASourceLanguage_AsksForItsPackOnlyWhileThePackIsMissing()
+    {
+        foreach (var language in RealtimeTranslationPanelItems.SourceLanguages.Where(l => l.Pack is not null))
+        {
+            Assert.Equal(!language.Pack!.IsReady, RealtimeTranslationPanel.NeedsPackFirst(RealtimeLanguageKind.Source, language));
+            Assert.False(RealtimeTranslationPanel.NeedsPackFirst(RealtimeLanguageKind.Target, language));
+        }
+    }
+
+    // The row's content is tick, then the pack hint when there is one, then the label.
+    private static FrameworkElement? PackHintOf(System.Windows.Controls.Button row) =>
+        ((DockPanel)row.Content).Children.OfType<FrameworkElement>()
+            .Where(child => child is not System.Windows.Shapes.Path && child is not TextBlock)
+            .FirstOrDefault();
+
     private static bool Ticked(System.Windows.Controls.Button row) =>
         row.Content is DockPanel content &&
         content.Children.OfType<System.Windows.Shapes.Path>().First().Visibility == Visibility.Visible;

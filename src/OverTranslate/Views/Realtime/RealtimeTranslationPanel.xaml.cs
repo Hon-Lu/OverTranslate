@@ -329,7 +329,9 @@ internal partial class RealtimeTranslationPanel : Window
 
     private void AddLanguageRow(RealtimeLanguageEntry entry, RealtimeLanguageKind kind)
     {
-        var hint = entry.Language.Pack is { } pack ? PackHint(pack) : null;
+        // A pack is for reading the source; translating into its languages needs none, as on the
+        // realtime page and the capture toolbar, where only the source picker shows it.
+        var hint = kind == RealtimeLanguageKind.Source && entry.Language.Pack is { } pack ? PackHint(pack) : null;
         var row = BuildRow(entry.Label, entry.Language.Display, entry.IsSelected, (Style)FindResource("LanguagePanelRow"), null, hint);
         row.Tag = entry;
         if (entry.Language.Display != entry.Label) row.ToolTip = entry.Language.Display;
@@ -587,7 +589,7 @@ internal partial class RealtimeTranslationPanel : Window
     {
         if (_closing) return;
 
-        if (entry.Language.Pack is { IsReady: false })
+        if (NeedsPackFirst(kind, entry.Language))
         {
             ShowPackCard(entry);
             return;
@@ -596,6 +598,10 @@ internal partial class RealtimeTranslationPanel : Window
         Log.Info("Realtime translation panel: picked {Kind} {Code}", kind, entry.Code);
         LanguagePicked?.Invoke(this, (kind, entry.Code));
     }
+
+    /// <summary>Whether a pick has to wait for a language pack: only a source the recogniser cannot read yet.</summary>
+    internal static bool NeedsPackFirst(RealtimeLanguageKind kind, LangItem language) =>
+        kind == RealtimeLanguageKind.Source && language.Pack is { IsReady: false };
 
     /// <summary>Closes the panel. What was picked stays picked.</summary>
     /// <param name="giveBackForeground">
