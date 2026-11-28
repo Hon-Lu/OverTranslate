@@ -436,7 +436,6 @@
     <sys:String x:Key="S.Realtime.CompareHotkeyTaken">원문 대조 단축키 {0}을(를) 다른 프로그램에서 사용 중입니다</sys:String>
     <sys:String x:Key="S.Realtime.HideTranslation">번역문 숨기기</sys:String>
     <sys:String x:Key="S.Realtime.ShowTranslation">번역문 표시</sys:String>
-    <sys:String x:Key="S.Realtime.TranslationHidden">번역문 숨김</sys:String>
     <sys:String x:Key="S.Realtime.HideHotkeyTaken">번역문 숨기기 단축키 {0}을(를) 다른 프로그램에서 사용 중입니다</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOn">켜짐</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOff">꺼짐</sys:String>
@@ -632,7 +631,7 @@
     <sys:String x:Key="S.Settings.RealtimeCompareHotkey">원문 대조</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkeyNote">실시간 번역 중에만 작동합니다. 번역문으로 원문을 덮을지, 대조 영역에 표시할지 전환합니다.</sys:String>
     <sys:String x:Key="S.Settings.RealtimeHideHotkey">번역문 숨기기/표시</sys:String>
-    <sys:String x:Key="S.Settings.RealtimeHideHotkeyNote">실시간 번역 중에만 작동합니다. 번역문을 잠시 숨겨 원래 화면을 확인하며, 번역은 계속됩니다.</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeHideHotkeyNote">실시간 번역 중에만 작동합니다. 번역문을 숨겨 원래 화면을 확인하며, 숨긴 동안에도 번역은 계속됩니다.</sys:String>
     <sys:String x:Key="S.Settings.RealtimeHotkeysNote">시작/일시 정지와 원문 대조</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">팝업 번역</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">텍스트를 선택해 두면 창이 열릴 때 자동으로 불러와 번역합니다.</sys:String>

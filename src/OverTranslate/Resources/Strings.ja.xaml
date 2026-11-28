@@ -436,7 +436,6 @@
     <sys:String x:Key="S.Realtime.CompareHotkeyTaken">原文対照のショートカットキー {0} は他のプログラムで使用中です</sys:String>
     <sys:String x:Key="S.Realtime.HideTranslation">訳文を非表示</sys:String>
     <sys:String x:Key="S.Realtime.ShowTranslation">訳文を表示</sys:String>
-    <sys:String x:Key="S.Realtime.TranslationHidden">訳文を非表示中</sys:String>
     <sys:String x:Key="S.Realtime.HideHotkeyTaken">訳文非表示のショートカットキー {0} は他のプログラムで使用中です</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOn">オン</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOff">オフ</sys:String>
@@ -632,7 +631,7 @@
     <sys:String x:Key="S.Settings.RealtimeCompareHotkey">原文対照</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkeyNote">リアルタイム翻訳中のみ有効です。訳文で原文を覆うか、対照エリアに表示するかを切り替えます。</sys:String>
     <sys:String x:Key="S.Settings.RealtimeHideHotkey">訳文の表示／非表示</sys:String>
-    <sys:String x:Key="S.Settings.RealtimeHideHotkeyNote">リアルタイム翻訳中のみ有効です。訳文を一時的に隠して元の画面を確認できます。翻訳は継続します。</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeHideHotkeyNote">リアルタイム翻訳中のみ有効です。訳文を隠して元の画面を確認できます。非表示中も翻訳は続きます。</sys:String>
     <sys:String x:Key="S.Settings.RealtimeHotkeysNote">開始／一時停止と原文対照</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">ポップアップ翻訳</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">テキストを選択していると、ウィンドウを開いたときに自動で読み込んで翻訳します。</sys:String>

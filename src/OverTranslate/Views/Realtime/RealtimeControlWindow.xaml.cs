@@ -97,9 +97,6 @@ public partial class RealtimeControlWindow : Window
     // Lasts exactly as long as the load it is about; a message borrowing the slot meanwhile hands it
     // back to this. 已暫停 wins over it — see SetLoadingModels.
     private static string LoadingModelsStatus => LocalizationService.Get("S.Realtime.LoadingModels");
-    // Not transient either, for 已暫停's reason: with the words hidden the screen looks like a session
-    // with nothing to read. Below 已暫停 — see RealtimeRunStatusRule.
-    private static string HiddenStatus => LocalizationService.Get("S.Realtime.TranslationHidden");
     private bool _hasLanguages;
     // The codes behind the two names, for the lists to mark and for a pick to be told apart from
     // the language already in use.
@@ -520,14 +517,14 @@ public partial class RealtimeControlWindow : Window
     /// as the session having died.
     /// </remarks>
     /// <summary>
-    /// Shows 隱藏譯文 as on or off: the button held down, and 已隱藏譯文 beside the pair. The dot keeps
-    /// the accent — the session is still reading, which is the difference from 已暫停's grey.
+    /// Shows 隱藏譯文 as on or off. The button held down is the whole of it: no words beside the
+    /// pair, which the held-down eye already says, and the dot keeps the accent — the session is still
+    /// reading, which is the difference from 已暫停's grey.
     /// </summary>
     public void SetTranslationHidden(bool hidden)
     {
         _translationHidden = hidden;
         ApplyHideButton();
-        if (!_messageShowing) RestoreText();
     }
 
     private void ApplyHideButton()
@@ -855,29 +852,20 @@ public partial class RealtimeControlWindow : Window
         _failureShowing = false;
         EditHintText.Text = _crosshairEnabled ? EditHint : CrosshairOffHint;
 
-        var status = RealtimeRunStatusRule.For(_isPaused, _translationHidden, _isLoadingModels);
+        var status = RealtimeRunStatusRule.For(_isPaused, _isLoadingModels);
         RunStatusText.Text = status switch
         {
             RealtimeRunStatus.Paused => PausedStatus,
-            RealtimeRunStatus.TranslationHidden => HiddenStatus,
             RealtimeRunStatus.LoadingModels => LoadingModelsStatus,
             _ => RunStatus,
         };
-        // In the accent, as the held-down button is: the session is still working, and the one thing
-        // set aside is the user's own choice. 已暫停 stays in the ordinary text colour.
-        if (status == RealtimeRunStatus.TranslationHidden)
-            RunStatusText.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "AppAccent");
-        else
-            RunStatusText.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "AppTextPrimary");
 
         // Paused, the pair stays beside 已暫停 rather than giving way to it: the pair is the one place
         // the languages can be changed from (#345), and a paused session is where someone who noticed
         // the wrong one is most likely to stop and fix it before carrying on.
         var showPair = _hasLanguages && !_isLoadingModels;
         LangPairPanel.Visibility = showPair ? Visibility.Visible : Visibility.Collapsed;
-        // 已隱藏譯文 stays beside the pair for 已暫停's reason.
-        var namesState = status is RealtimeRunStatus.Paused or RealtimeRunStatus.TranslationHidden;
-        RunStatusText.Visibility = showPair && !namesState ? Visibility.Collapsed : Visibility.Visible;
+        RunStatusText.Visibility = showPair && status != RealtimeRunStatus.Paused ? Visibility.Collapsed : Visibility.Visible;
 
         // Red still, for a failure that was clicked away: it is set aside, not over.
         SetDotState(failed: failing);

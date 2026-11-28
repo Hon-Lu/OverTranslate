@@ -432,7 +432,6 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Realtime.CompareHotkeyTaken">The compare shortcut {0} is in use by another program</sys:String>
     <sys:String x:Key="S.Realtime.HideTranslation">Hide translation</sys:String>
     <sys:String x:Key="S.Realtime.ShowTranslation">Show translation</sys:String>
-    <sys:String x:Key="S.Realtime.TranslationHidden">Translation hidden</sys:String>
     <sys:String x:Key="S.Realtime.HideHotkeyTaken">The hide-translation shortcut {0} is in use by another program</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOn">On</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOff">Off</sys:String>
@@ -628,7 +627,7 @@ Actually used this time: {2}</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkey">Compare with original</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkeyNote">Works only during realtime translation. Switches between the translation covering the original and showing it in the compare area.</sys:String>
     <sys:String x:Key="S.Settings.RealtimeHideHotkey">Hide or show translation</sys:String>
-    <sys:String x:Key="S.Settings.RealtimeHideHotkeyNote">Works only during realtime translation. Hides the translation to reveal the original screen while translation keeps running.</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeHideHotkeyNote">Works only during realtime translation. Hides the translation to show the original screen; translation continues while hidden.</sys:String>
     <sys:String x:Key="S.Settings.RealtimeHotkeysNote">Start / pause and compare with original</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">Quick lookup</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">If text is selected, it is carried in and translated as the popup opens.</sys:String>

@@ -426,7 +426,7 @@
                             <!-- The order, left to right: 截圖翻譯; 隱藏譯文 and 原文對照; 暫停; 顯示外觀 and 模式;
                                  編輯; then the collapse toggle and ✕ after the rule. 截圖翻譯 is leftmost because
                                  it is a different feature and the least pressed of them, and the left end is
-                                 the one that moves as the text beside the pair (已暫停, 已隱藏譯文) comes and
+                                 the one that moves as the text beside the pair (已暫停, 載入模型中) comes and
                                  goes — the right edge is the one pinned (see OnWindowPosChanging). The two
                                  switches about how the translation is seen sit together, 暫停 after them, the
                                  two panels together, and 編輯 nearest the pinned edge. -->

@@ -50,12 +50,15 @@ public sealed class RealtimeTranslationHiding
 }
 
 /// <summary>What the running capsule's text slot says beside the language pair.</summary>
+/// <remarks>
+/// 隱藏譯文 has no entry: the eye held down on the bar already says it, and a piece of text beside
+/// the pair only repeated the button.
+/// </remarks>
 public enum RealtimeRunStatus
 {
-    /// <summary>Nothing: the pair speaks for a session that is reading and showing.</summary>
+    /// <summary>Nothing: the pair speaks for a session that is reading.</summary>
     Running,
     LoadingModels,
-    TranslationHidden,
     Paused,
 }
 
@@ -65,14 +68,10 @@ public static class RealtimeRunStatusRule
     /// The one state the capsule names, when several hold at once.
     /// </summary>
     /// <remarks>
-    /// 已暫停 first: a paused session draws nothing whether or not the words are also hidden, and the
-    /// pause is the one the user has to undo for anything to happen. 已隱藏譯文 before the model load:
-    /// both leave the screen empty, but the hiding is the user's own and is what they will look for
-    /// when the words do not come back — the pulsing dot still says that work is going on.
+    /// 已暫停 first: the pause is the one the user has to undo for anything to happen.
     /// </remarks>
-    public static RealtimeRunStatus For(bool paused, bool hidden, bool loadingModels) =>
+    public static RealtimeRunStatus For(bool paused, bool loadingModels) =>
         paused ? RealtimeRunStatus.Paused
-        : hidden ? RealtimeRunStatus.TranslationHidden
         : loadingModels ? RealtimeRunStatus.LoadingModels
         : RealtimeRunStatus.Running;
 }

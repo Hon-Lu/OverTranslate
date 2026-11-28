@@ -429,7 +429,6 @@
     <sys:String x:Key="S.Realtime.CompareHotkeyTaken">Сочетание {0} для сравнения с оригиналом занято другой программой</sys:String>
     <sys:String x:Key="S.Realtime.HideTranslation">Скрыть перевод</sys:String>
     <sys:String x:Key="S.Realtime.ShowTranslation">Показать перевод</sys:String>
-    <sys:String x:Key="S.Realtime.TranslationHidden">Перевод скрыт</sys:String>
     <sys:String x:Key="S.Realtime.HideHotkeyTaken">Сочетание {0} для скрытия перевода занято другой программой</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOn">Вкл.</sys:String>
     <sys:String x:Key="S.Realtime.CompareDisplayOff">Выкл.</sys:String>
@@ -623,7 +622,7 @@
     <sys:String x:Key="S.Settings.RealtimeCompareHotkey">Сравнение с оригиналом</sys:String>
     <sys:String x:Key="S.Settings.RealtimeCompareHotkeyNote">Работает только во время перевода в реальном времени. Переключает перевод поверх оригинала и показ в области сравнения.</sys:String>
     <sys:String x:Key="S.Settings.RealtimeHideHotkey">Скрыть или показать перевод</sys:String>
-    <sys:String x:Key="S.Settings.RealtimeHideHotkeyNote">Работает только во время перевода в реальном времени. Временно скрывает перевод, чтобы увидеть исходный экран; перевод продолжается.</sys:String>
+    <sys:String x:Key="S.Settings.RealtimeHideHotkeyNote">Работает только во время перевода в реальном времени. Скрывает перевод, чтобы увидеть исходный экран; перевод при этом продолжается.</sys:String>
     <sys:String x:Key="S.Settings.RealtimeHotkeysNote">Запуск, пауза и сравнение с оригиналом</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkey">Всплывающий перевод</sys:String>
     <sys:String x:Key="S.Settings.QuickLookupHotkeyNote">Если выделен текст, он сразу подставляется и переводится при открытии окна.</sys:String>
