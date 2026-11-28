@@ -110,12 +110,12 @@
     <!-- The hairline around a colour swatch in the 標記 palette. One neutral edge for all
          eight, so the two that would otherwise vanish into the bar — white here, black in the
          other theme — are the same object as the six that would not. -->
-    <SolidColorBrush x:Key="ToolbarSwatchEdge" Color="#5A5A5A"/>
-
-    <!-- The ink in the 螢光筆 icon, which is yellow in the way a trash can is a trash can:
-         not the colour currently chosen on the palette, but the one that says at a glance which
-         of the three tools this is. Darker in the light theme because the bar there is nearly
-         white, and the yellow that reads on a dark bar disappears into a pale one. -->
+    <SolidColorBrush x:Key="ToolbarSwatchEdge" Color="#5A5A5A"/>
+
+    <!-- The ink in the 螢光筆 icon, which is yellow in the way a trash can is a trash can:
+         not the colour currently chosen on the palette, but the one that says at a glance which
+         of the three tools this is. Darker in the light theme because the bar there is nearly
+         white, and the yellow that reads on a dark bar disappears into a pale one. -->
     <SolidColorBrush x:Key="ToolbarHighlighterInk" Color="#FACC15"/>
 
     <!-- The primary action on a floating toolbar. Its own blue rather than AppAccent, for the one
