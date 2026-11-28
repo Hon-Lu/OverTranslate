@@ -334,7 +334,7 @@ public class SettingsService
     }
 
     /// <summary>
-    /// Raised when 自動翻譯, 儲存截圖, 截圖後自動關閉 or 過濾數字與縮寫 changes. The first two are
+    /// Raised when 自動翻譯, 儲存截圖, 截圖後自動關閉, 過濾數字與縮寫 or Ctrl+C 複製截圖 changes. The first two are
     /// set from two places — the settings page and the capture toolbar's 設定 panel — and each has
     /// to show what the other just wrote.
     /// </summary>
@@ -342,19 +342,22 @@ public class SettingsService
 
     public void UpdateCaptureOptions(
         bool? autoTranslate = null, bool? saveScreenshot = null, bool? closeAfterCopy = null,
-        bool? filterNumbers = null)
+        bool? filterNumbers = null, bool? copyOnCtrlC = null)
     {
         var current = Current;
         var auto = autoTranslate ?? current.AutoTranslateAfterSelection;
         var save = saveScreenshot ?? current.SaveScreenshotToDisk;
         var close = closeAfterCopy ?? current.Capture.CloseAfterCopy;
         var filter = filterNumbers ?? current.Capture.FilterNumbersAndAbbreviations;
+        var ctrlC = copyOnCtrlC ?? current.Capture.CopyOnCtrlC;
         if (auto == current.AutoTranslateAfterSelection && save == current.SaveScreenshotToDisk &&
-            close == current.Capture.CloseAfterCopy && filter == current.Capture.FilterNumbersAndAbbreviations) return;
+            close == current.Capture.CloseAfterCopy && filter == current.Capture.FilterNumbersAndAbbreviations &&
+            ctrlC == current.Capture.CopyOnCtrlC) return;
         current.AutoTranslateAfterSelection = auto;
         current.SaveScreenshotToDisk = save;
         current.Capture.CloseAfterCopy = close;
         current.Capture.FilterNumbersAndAbbreviations = filter;
+        current.Capture.CopyOnCtrlC = ctrlC;
         Save();
         CaptureOptionsChanged?.Invoke(this, EventArgs.Empty);
     }
