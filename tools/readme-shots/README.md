@@ -30,6 +30,9 @@ powershell -ExecutionPolicy Bypass -File tools\readme-shots\shoot.ps1 -Build
 | `-Phase main` / `backup` / `realtime` | 只拍主視窗那十五張、只拍備援那張，或只拍即時翻譯功能預覽；預設 `all`（不含 `realtime`） |
 | `-Langs zh-Hant,en` | 只拍這幾種介面語言；預設五種 |
 | `-CopyToOriginals` | 拍完直接覆蓋 `docs/images/originals/` 裡的同名檔 |
+| `-Screen secondary` | 改在副螢幕拍，整套只碰副螢幕（使用者還在用主螢幕時用這個）；預設 `primary` |
+
+每次截圖前會逐點確認範圍內都是 app 或取景視窗，送按鍵前也會確認前景是自己的視窗；有別的程式（遊戲、瀏覽器、遠端桌面）蓋在上面或拿著前景就停下來，不拍也不送鍵。
 
 輸出與 log 在 `artifacts/readme-shots/out/`（不進版控）。拍完一定要看過：`run.log` 會記下捲動位置，`backup-full.png` 是裁切前的整個主螢幕。
 

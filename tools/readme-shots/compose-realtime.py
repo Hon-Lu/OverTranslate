@@ -55,7 +55,12 @@ ww, wh = min(ww, W - wx), min(wh, H - wy)
 win = np.asarray(appe).astype(int)[wy:wy + wh, wx:wx + ww].mean(2) > sum(bg) / 3 + 3
 mid = ww // 2
 col = np.where(win[:, mid])[0]
-pt, pb = col[0], col[-1] + 1
+# When the panel opens above the bar, the bar is the last light run, short and below a gap: leave it
+# out. Darker controls inside the panel break the column too, so only that last short run is dropped.
+runs = np.split(col, np.where(np.diff(col) > 1)[0] + 1)
+if len(runs) > 1 and len(runs[-1]) < 90:
+    runs = runs[:-1]
+pt, pb = runs[0][0], runs[-1][-1] + 1
 band = np.where(win[pt + 20])[0]
 # Where a wide panel overlaps the game, the game is lighter too: walk left from the middle along the
 # row while the pixels stay the panel's neutral greys.

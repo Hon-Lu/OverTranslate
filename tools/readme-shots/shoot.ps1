@@ -3,7 +3,9 @@ param(
     [ValidateSet('all', 'main', 'backup', 'realtime')][string]$Phase = 'all',
     [string[]]$Langs = @('zh-Hant', 'zh-Hans', 'en', 'ja', 'ko'),
     [switch]$Build,
-    [switch]$CopyToOriginals
+    [switch]$CopyToOriginals,
+    # 在哪個螢幕拍。使用者還在用主螢幕時改用 secondary，整套只碰那個螢幕。
+    [ValidateSet('primary', 'secondary')][string]$Screen = 'primary'
 )
 $ErrorActionPreference = 'Stop'
 # Through -File, "-Langs en,ja" arrives as the one string "en,ja".
@@ -19,7 +21,12 @@ Add-Type -Namespace RS -Name W -MemberDefinition @'
 [DllImport("user32.dll")] public static extern bool GetWindowRect(System.IntPtr h, out RECT r);
 [DllImport("user32.dll")] public static extern uint GetDpiForWindow(System.IntPtr h);
 [DllImport("dwmapi.dll")] public static extern int DwmGetWindowAttribute(System.IntPtr h, int a, out RECT r, int size);
+[DllImport("user32.dll")] public static extern System.IntPtr WindowFromPoint(POINT p);
+[DllImport("user32.dll")] public static extern System.IntPtr GetAncestor(System.IntPtr h, uint f);
+[DllImport("user32.dll")] public static extern System.IntPtr GetForegroundWindow();
+[DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(System.IntPtr h, out uint pid);
 public struct RECT { public int L, T, R, B; }
+public struct POINT { public int X, Y; }
 '@
 # Per-monitor aware, so every rectangle below is in physical pixels on whichever monitor it is on.
 [void][RS.W]::SetProcessDpiAwarenessContext([IntPtr]-4)
@@ -35,8 +42,11 @@ $Settings = "$env:APPDATA\OverTranslate\appsettings.json"
 $Backup = "$Work\appsettings.backup.json"
 $Originals = "$Root\docs\images\originals"
 
-$Pri = ([System.Windows.Forms.Screen]::AllScreens | Where-Object Primary).Bounds
-$SecScreen = [System.Windows.Forms.Screen]::AllScreens | Where-Object { -not $_.Primary } | Select-Object -First 1
+# $Pri 是拍照的螢幕，$Sec 是另一個（只在拍主螢幕時拿來停游標、放主視窗）。
+$PriScreen = [System.Windows.Forms.Screen]::AllScreens | Where-Object { $_.Primary -eq ($Screen -eq 'primary') } | Select-Object -First 1
+if (-not $PriScreen) { throw "no $Screen screen" }
+$Pri = $PriScreen.Bounds
+$SecScreen = if ($Screen -eq 'primary') { [System.Windows.Forms.Screen]::AllScreens | Where-Object { -not $_.Primary } | Select-Object -First 1 } else { $null }
 $Sec = if ($SecScreen) { $SecScreen.Bounds } else { $null }
 $PCX = $Pri.X + [int]($Pri.Width / 2); $PCY = $Pri.Y + [int]($Pri.Height / 2)
 
@@ -94,6 +104,7 @@ function Start-App {
     Park
     if (-not $app) { throw 'main window did not appear' }
     $script:AppPid = $app.Id
+    $script:OurPids = @($script:OurPids | Where-Object { Get-Process -Id $_ -ErrorAction SilentlyContinue }) + $app.Id
     $app
 }
 function Stop-App { Get-Process OverTranslate -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $Exe } | Stop-Process -Force; Start-Sleep 1 }
@@ -105,7 +116,22 @@ function Center([IntPtr]$h) {
     [void][RS.W]::SetWindowPos($h, [IntPtr]::Zero, $x, $y, 0, 0, 0x15)
     Start-Sleep -Milliseconds 400
 }
+# 拍之前逐點確認畫面上是自己的視窗（app、取景視窗、黑底），否則不拍：使用者開著的程式（遊戲、
+# 瀏覽器）若蓋在上面，會被拍進去。$script:OurPids 由各階段在開 app 與取景視窗後設定。
+$script:OurPids = @()
+function Assert-Ours([int]$X, [int]$Y, [int]$W, [int]$H) {
+    for ($i = 0; $i -le 12; $i++) { for ($j = 0; $j -le 8; $j++) {
+        $p = New-Object RS.W+POINT; $p.X = $X + [int](($W - 1) * $i / 12); $p.Y = $Y + [int](($H - 1) * $j / 8)
+        $root = [RS.W]::GetAncestor([RS.W]::WindowFromPoint($p), 2); $id = [uint32]0
+        [void][RS.W]::GetWindowThreadProcessId($root, [ref]$id)
+        if ($script:OurPids -notcontains [int]$id) {
+            $name = (Get-Process -Id $id -ErrorAction SilentlyContinue).ProcessName
+            throw "not ours at $($p.X),$($p.Y): $name (pid $id); close or minimise it and run again"
+        }
+    } }
+}
 function Shot([string]$Path, [int]$X, [int]$Y, [int]$W, [int]$H) {
+    Assert-Ours $X $Y $W $H
     $bmp = New-Object System.Drawing.Bitmap $W, $H
     $g = [System.Drawing.Graphics]::FromImage($bmp); $g.CopyFromScreen($X, $Y, 0, 0, $bmp.Size)
     $bmp.Save($Path, [System.Drawing.Imaging.ImageFormat]::Png); $g.Dispose(); $bmp.Dispose()
@@ -124,7 +150,24 @@ function Select-Nav([string]$Id) {
     $e.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     Start-Sleep -Milliseconds 1500
 }
+# 送按鍵前前景一定要是自己的視窗：另一個螢幕可能是遠端桌面，按鍵會被送進去。
+function Assert-Foreground {
+    $fg = [RS.W]::GetForegroundWindow(); $id = [uint32]0; [void][RS.W]::GetWindowThreadProcessId($fg, [ref]$id)
+    if ($script:OurPids -notcontains [int]$id) {
+        # 從背景程序 SetForegroundWindow 會被 Windows 拒絕；改成點一下自己的取景視窗（拍照螢幕的左下角，
+        # 先確認那一點是取景視窗才點），它就會成為前景。
+        $p = New-Object RS.W+POINT; $p.X = $Pri.X + 3; $p.Y = $Pri.Y + $Pri.Height - 3
+        $root = [RS.W]::GetAncestor([RS.W]::WindowFromPoint($p), 2); $vid = [uint32]0; [void][RS.W]::GetWindowThreadProcessId($root, [ref]$vid)
+        if ($script:OurPids.Count -and [int]$vid -eq $script:OurPids[0]) {
+            [void][RS.W]::SetCursorPos($p.X, $p.Y); Start-Sleep -Milliseconds 200
+            [RS.W]::mouse_event(0x0002, 0, 0, 0, [UIntPtr]::Zero); [RS.W]::mouse_event(0x0004, 0, 0, 0, [UIntPtr]::Zero); Start-Sleep -Milliseconds 400
+        }
+        $fg = [RS.W]::GetForegroundWindow(); [void][RS.W]::GetWindowThreadProcessId($fg, [ref]$id)
+        if ($script:OurPids -notcontains [int]$id) { throw "foreground is not ours: $((Get-Process -Id $id -ErrorAction SilentlyContinue).ProcessName) (pid $id); no keys sent" }
+    }
+}
 function Press([int[]]$Keys) {
+    Assert-Foreground
     foreach ($k in $Keys) { [RS.W]::keybd_event([byte]$k, 0, 0, [UIntPtr]::Zero) }
     [array]::Reverse($Keys); foreach ($k in $Keys) { [RS.W]::keybd_event([byte]$k, 0, 2, [UIntPtr]::Zero) }
 }
@@ -210,6 +253,10 @@ $hash = (Get-FileHash $Settings).Hash
 $made = @()
 try {
     if ($Phase -in 'all', 'main') {
+        # 整片純黑墊在主視窗後面（不置頂），圓角外才是黑的。
+        $backdrop = Start-Process powershell.exe -PassThru -WindowStyle Hidden -ArgumentList '-NoProfile', '-STA', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSScriptRoot\viewer.ps1`"", '-Out', "`"$Out\backdrop.txt`"", '-Blank', '-Seconds', '1800', '-Screen', $Screen
+        $script:OurPids = @($backdrop.Id); Start-Sleep 2
+        try {
         foreach ($lang in $Langs) {
             Mark "== $lang"
             Edit-Settings @{ UiLanguage = $lang }
@@ -223,13 +270,15 @@ try {
             $f = "$Out\$RealtimeName$($Suffix[$lang]).png"; Shot-Window $h $f; $made += $f
             Stop-App
         }
+        } finally { try { $backdrop.Kill() } catch {} }
     }
     if ($Phase -in 'all', 'backup') {
         Mark '== backup badge'
         Edit-Settings @{ UiLanguage = 'zh-Hant'; Provider = 'Microsoft'; AutoTranslateAfterSelection = $true }
         $env:OT_SHOT_BACKUP = '1'
         Remove-Item "$Out\viewer.txt" -ErrorAction SilentlyContinue
-        $viewer = Start-Process powershell.exe -PassThru -WindowStyle Hidden -ArgumentList '-NoProfile', '-STA', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSScriptRoot\viewer.ps1`"", '-Out', "`"$Out\viewer.txt`""
+        $viewer = Start-Process powershell.exe -PassThru -WindowStyle Hidden -ArgumentList '-NoProfile', '-STA', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSScriptRoot\viewer.ps1`"", '-Out', "`"$Out\viewer.txt`"", '-Screen', $Screen
+        $script:OurPids = @($viewer.Id)
         try {
             $app = Start-App
             # The main window is not in this picture: off to the side, or minimised without a second monitor.
@@ -239,7 +288,7 @@ try {
             Start-Sleep 1
             $v = (Get-Content "$Out\viewer.txt").Split(','); $vx = [int]$v[0]; $vy = [int]$v[1]; $vw = [int]$v[2]; $vh = [int]$v[3]
             # Ctrl+Alt+A, the default 截圖翻譯 shortcut; the whole panel is selected, so the toolbar lands on black.
-            [void][RS.W]::SetCursorPos($PCX, $PCY)
+            [void][RS.W]::SetCursorPos($PCX, $PCY); Assert-Foreground
             foreach ($k in 0x11, 0x12, 0x41) { [RS.W]::keybd_event([byte]$k, 0, 0, [UIntPtr]::Zero) }
             foreach ($k in 0x41, 0x12, 0x11) { [RS.W]::keybd_event([byte]$k, 0, 2, [UIntPtr]::Zero) }
             Start-Sleep 2
@@ -262,12 +311,12 @@ try {
             # From the provider box to the toolbar's right edge, down to the tooltip, as the old picture was cut.
             $full = [System.Drawing.Image]::FromFile("$Out\backup-full.png")
             $cl = [int]($r.Left - $Pri.X - 5 * $s); $ct = [int]($r.Top - $Pri.Y - 25 * $s)
-            $cut = New-Object System.Drawing.Rectangle $cl, $ct, ([int](716 * $s)), ([int](131 * $s))
+            $cut = New-Object System.Drawing.Rectangle $cl, $ct, ([int](758 * $s)), ([int](131 * $s))
             $crop = ([System.Drawing.Bitmap]$full).Clone($cut, $full.PixelFormat)
             $f = "$Out\$BackupName.png"; $crop.Save($f, [System.Drawing.Imaging.ImageFormat]::Png); $made += $f
             $crop.Dispose(); $full.Dispose()
             Mark "  cropped $BackupName.png $($cut.Width)x$($cut.Height)"
-            [RS.W]::keybd_event(0x1B, 0, 0, [UIntPtr]::Zero); [RS.W]::keybd_event(0x1B, 0, 2, [UIntPtr]::Zero)
+            Assert-Foreground; [RS.W]::keybd_event(0x1B, 0, 0, [UIntPtr]::Zero); [RS.W]::keybd_event(0x1B, 0, 2, [UIntPtr]::Zero)
             Start-Sleep 1
         } finally {
             try { $viewer.Kill() } catch {}
@@ -285,7 +334,8 @@ try {
         Set-Prop $j.Realtime 'SourceLanguage' 'EN'; Set-Prop $j.Realtime 'TargetLanguage' 'ZH-HANT'; Set-Prop $j.Realtime 'Provider' 'Bing'
         [IO.File]::WriteAllText($Settings, ($j | ConvertTo-Json -Depth 20), (New-Object System.Text.UTF8Encoding($false)))
         Remove-Item "$Out\viewer.txt" -ErrorAction SilentlyContinue
-        $viewer = Start-Process powershell.exe -PassThru -WindowStyle Hidden -ArgumentList '-NoProfile', '-STA', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSScriptRoot\viewer.ps1`"", '-Out', "`"$Out\viewer.txt`"", '-Image', "`"$PSScriptRoot\realtime-scene.png`"", '-Scale', '1.3333'
+        $viewer = Start-Process powershell.exe -PassThru -WindowStyle Hidden -ArgumentList '-NoProfile', '-STA', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSScriptRoot\viewer.ps1`"", '-Out', "`"$Out\viewer.txt`"", '-Image', "`"$PSScriptRoot\realtime-scene.png`"", '-Scale', '1.3333', '-Screen', $Screen
+        $script:OurPids = @($viewer.Id)
         try {
             $app = Start-App
             if ($Sec) { [void][RS.W]::SetWindowPos($app.MainWindowHandle, [IntPtr]::Zero, $Sec.X + 20, $Sec.Y + 20, 0, 0, 0x15) }
