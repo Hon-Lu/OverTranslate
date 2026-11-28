@@ -558,6 +558,7 @@ internal sealed class RealtimeSessionController
         control.SetCollapsed(SettingsService.Instance.Current.Realtime.ControlBarCollapsed);
         control.CollapsedChanged += (_, collapsed) => SaveControlBarCollapsed(collapsed);
         control.LanguagesChangeRequested += (_, pair) => ChangeLanguages(pair.Source, pair.Target);
+        control.ProviderChangeRequested += (_, provider) => ChangeProvider(provider);
         control.AppearanceChanged += (_, _) => ApplyAppearance();
         // A static source again: unsubscribed in Stop, or it would keep this session alive.
         SettingsService.Instance.RealtimeProfilesChanged += OnRealtimeProfilesChanged;
@@ -1421,6 +1422,7 @@ internal sealed class RealtimeSessionController
         // Set before the mode switch renders, so the capsule appears with the pair already in it
         // rather than showing the placeholder for a frame.
         control.SetLanguages(request.SourceLanguage, request.TargetLanguage);
+        control.SetProvider(request.Provider);
         control.SetMode(RealtimeControlMode.Running);
         control.BringToFront();
         _stayOnTop.Start();
@@ -1657,6 +1659,64 @@ internal sealed class RealtimeSessionController
             request.SourceLanguage, request.TargetLanguage, source, target, rebuilt, paused);
 
         LanguagesChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Raised after the floating bar changed the session's translation service, once the new one is
+    /// in the settings file — for the page whose picker shows it.
+    /// </summary>
+    public event EventHandler? ProviderChanged;
+
+    /// <summary>
+    /// Switches the translation service from the running capsule, without ending anything.
+    /// </summary>
+    /// <remarks>
+    /// <para>Written to <c>Realtime.Provider</c> on the press, as a change of languages is, and only
+    /// there: 即時翻譯 keeps its service apart from the one the rest of the application uses.</para>
+    ///
+    /// <para>The overlays are emptied rather than rebuilt. The service decides nothing about how a
+    /// window draws, so the windows can stay; what they were showing is the old service's wording,
+    /// and the session fences anything still in flight, so they stay empty until the new service's
+    /// first answer arrives — at once from the cache for lines it has translated before.</para>
+    ///
+    /// <para>Paused, the session stays paused; 繼續 starts on the new service.</para>
+    /// </remarks>
+    private void ChangeProvider(Models.TranslationProvider provider)
+    {
+        if (_request is not { } request || _control is not { } control || _session is not { } session) return;
+
+        // The bar is off the screen while a capture stands on the session — see ChangeLanguages.
+        if (_interlude.HideLayers || !IsTranslating) return;
+
+        provider = Models.LanguageData.CurrentProvider(provider);
+        if (!RealtimeProviderSwitch.IsChange(request.Provider, provider)) return;
+
+        // The new service starts the loops on what the session holds, so modes changed a moment ago
+        // go to it first.
+        FlushProfiles();
+
+        var paused = session.IsPaused;
+        _request = request with { Provider = provider };
+
+        var settings = SettingsService.Instance;
+        RealtimeProviderSwitch.Remember(settings.Current, provider);
+        settings.Save();
+
+        // First, so nothing the old service still had in flight can be drawn.
+        Volatile.Write(ref _visibleGeneration, session.ChangeProvider(provider));
+
+        foreach (var window in _blockWindows.Values)
+            window.SetLines([]);
+        _shownLines.Clear();
+
+        control.SetProvider(provider);
+        if (!paused) _loadingHint?.Wait(session.ModelsLoading);
+
+        Log.Info(
+            "Realtime provider switched mid-session: {Old} -> {New} (paused: {Paused})",
+            request.Provider, provider, paused);
+
+        ProviderChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>

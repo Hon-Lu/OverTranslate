@@ -120,9 +120,10 @@ public sealed class RealtimeTranslationSession
     private readonly object _glossaryGate = new();
 
     // What Resume needs to put the loops back the way Start left them. A paused session is still
-    // the session the user framed: the blocks and the engine cannot change while it is paused,
-    // because everything that could change them lives on a page a session has hidden. The languages
-    // can, from the floating bar — see ChangeLanguages — and Resume starts on whatever they are now.
+    // the session the user framed: the blocks cannot change while it is paused, because everything
+    // that could change them lives on a page a session has hidden. The languages and the engine can,
+    // from the floating bar — see ChangeLanguages and ChangeProvider — and Resume starts on whatever
+    // they are now.
     private IReadOnlyList<RealtimeRegion> _regions = [];
     private string _sourceLanguage = "";
     private string _targetLanguage = "";
@@ -222,8 +223,8 @@ public sealed class RealtimeTranslationSession
         ClearFailures();
 
         Log.Info(
-            "Realtime session started: {Count} region(s), {Src}->{Tgt}, capture={Capture}",
-            regions.Count, sourceLanguage, targetLanguage, capture.Name);
+            "Realtime session started: {Count} region(s), {Src}->{Tgt}, provider={Provider}, capture={Capture}",
+            regions.Count, sourceLanguage, targetLanguage, provider, capture.Name);
         LogProfiles(regions);
 
         // A watched region is idle between lines, and the recogniser cannot tell that from a tray
@@ -367,6 +368,9 @@ public sealed class RealtimeTranslationSession
         Start(_regions, _sourceLanguage, _targetLanguage, _provider, capture, readAtOnce: true);
     }
 
+    /// <summary>The engine this session translates with, as <see cref="Resume"/> would start it with.</summary>
+    public Models.TranslationProvider Provider => _provider;
+
     /// <summary>The language this session reads, as <see cref="Resume"/> would start it with.</summary>
     public string SourceLanguage => _sourceLanguage;
 
@@ -416,6 +420,47 @@ public sealed class RealtimeTranslationSession
 
         if (running)
             Start(_regions, sourceLanguage, targetLanguage, _provider, _capture!, readAtOnce: true, warmUp: false);
+
+        return generation;
+    }
+
+    /// <summary>
+    /// Translates with another engine from here on, without ending the session — picked from the
+    /// floating bar's translation panel.
+    /// </summary>
+    /// <remarks>
+    /// <para>The same steps as <see cref="ChangeLanguages"/>, for the same reasons: a running session
+    /// starts again at once and reads every region the way <see cref="Resume"/> does, and a paused one
+    /// stays paused and only remembers the engine for 繼續.</para>
+    ///
+    /// <para>Unlike a change of languages, the start warms the engine up. The model a change of
+    /// languages restarts over has just been translating; a newly picked one may not be loaded at all
+    /// — a local model takes seconds — and the bar's 載入模型中… waits for it the way it does when a
+    /// session starts.</para>
+    ///
+    /// <para>The fence keeps an answer from the old engine off the screen and out of the cache, and the
+    /// history goes for the reason it goes on a change of languages: another engine's translations
+    /// are not examples for this one. What is already in the cache stays, keyed by engine, so going
+    /// back to the engine just left finds the lines still on screen without asking it again.</para>
+    /// </remarks>
+    /// <returns>The generation from here on, for rejecting older queued UI updates.</returns>
+    public int ChangeProvider(Models.TranslationProvider provider)
+    {
+        var running = !IsPaused && _capture is not null;
+
+        // The loops first, then the fence — see ChangeLanguages.
+        if (running) StopLoops();
+        var generation = _translationCache.Fence();
+        _history.Clear();
+
+        Log.Info("Realtime session provider changed: {Old} to {New}, {State}",
+            _provider, provider,
+            running ? "restarting at once" : IsPaused ? "still paused" : "not started");
+
+        _provider = provider;
+
+        if (running)
+            Start(_regions, _sourceLanguage, _targetLanguage, provider, _capture!, readAtOnce: true);
 
         return generation;
     }

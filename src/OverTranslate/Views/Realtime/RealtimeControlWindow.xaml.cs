@@ -102,6 +102,8 @@ public partial class RealtimeControlWindow : Window
     // the language already in use.
     private string _sourceCode = "";
     private string _targetCode = "";
+    // The service the session translates with, as it last said through SetProvider.
+    private Models.TranslationProvider _provider;
 
     // The language list dropped from one of the two names, while it is open (#345).
     private RealtimeLanguageMenu? _menu;
@@ -284,6 +286,12 @@ public partial class RealtimeControlWindow : Window
     /// <see cref="SetLanguages"/>.
     /// </summary>
     public event EventHandler<(string Source, string Target)>? LanguagesChangeRequested;
+
+    /// <summary>
+    /// Raised with the translation service the user picked from the translation panel. The session
+    /// decides what follows and reports the service back through <see cref="SetProvider"/>.
+    /// </summary>
+    public event EventHandler<Models.TranslationProvider>? ProviderChangeRequested;
 
     /// <summary>
     /// Raised when a framing is picked from 翻譯區域預設, by its id: the session puts that arrangement
@@ -495,6 +503,12 @@ public partial class RealtimeControlWindow : Window
     /// setting that fails silently when it is wrong: recognition told to read the wrong script does
     /// not raise an error, it returns plausible nonsense, and this is where that is caught at a glance.
     /// </remarks>
+    /// <summary>Names the service the session translates with.</summary>
+    public void SetProvider(Models.TranslationProvider provider)
+    {
+        _provider = Models.LanguageData.CurrentProvider(provider);
+    }
+
     public void SetLanguages(string sourceCode, string targetCode)
     {
         _sourceCode = sourceCode;
