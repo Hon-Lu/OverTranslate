@@ -1853,6 +1853,83 @@
         </Setter>
     </Style>
 
+    <!-- The capture toolbar's pill once a translation is on screen: two buttons in one shape, the
+         translate half and 編輯框選範圍 grown beside it. Each half answers the pointer on its own —
+         hovering one must not light the other, or the two read as one button with two names. The
+         glow and the dimming while busy belong to the pill as a whole and are set on it, not here:
+         two glows side by side meet in a brighter seam, and two halves each dimmed would leave the
+         glow between them at full strength. -->
+    <Style x:Key="ToolbarPrimaryHalfBase" TargetType="Button" BasedOn="{StaticResource AccentButton}">
+        <Setter Property="Height"     Value="32"/>
+        <Setter Property="FontSize"   Value="12.5"/>
+        <Setter Property="Foreground" Value="{DynamicResource ToolbarPrimaryFg}"/>
+        <Setter Property="Background" Value="{DynamicResource ToolbarPrimaryBg}"/>
+    </Style>
+
+    <!-- The left half. A pill on its own until the right half grows, then square on the side it
+         meets it, with 12 rather than 14 before the rule so the rule sits as far from the label as
+         the right half's icon does from it. Driven by Tag so the code names the shape in one word. -->
+    <Style x:Key="ToolbarPrimaryMainHalf" TargetType="Button" BasedOn="{StaticResource ToolbarPrimaryHalfBase}">
+        <Setter Property="Padding" Value="14,0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="16"
+                            Padding="{TemplateBinding Padding}"
+                            RenderOptions.ClearTypeHint="Enabled">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Tag" Value="split">
+                            <Setter TargetName="Root" Property="CornerRadius" Value="16,0,0,16"/>
+                            <Setter TargetName="Root" Property="Padding" Value="14,0,12,0"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="Background"
+                                    Value="{DynamicResource ToolbarPrimaryHoverBg}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Root" Property="Background"
+                                    Value="{DynamicResource ToolbarPrimaryPressedBg}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- The right half: a 1-wide rule and a 32 square, rounded on the outer side only. The rule is
+         part of the content the toolbar gives it, not of this template, so that it fades in with the
+         icon while the blue grows in at full strength. -->
+    <Style x:Key="ToolbarPrimarySideHalf" TargetType="Button" BasedOn="{StaticResource ToolbarPrimaryHalfBase}">
+        <Setter Property="Width"   Value="33"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="0,16,16,0">
+                        <ContentPresenter/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="Background"
+                                    Value="{DynamicResource ToolbarPrimaryHoverBg}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Root" Property="Background"
+                                    Value="{DynamicResource ToolbarPrimaryPressedBg}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- A secondary action on the capture toolbar: its icon over its name, both centred. The label
          stays because none of these icons is standard enough to be read cold — and a toolbar the
          user meets mid-task, over their own screen, is the wrong place to make them hover to find

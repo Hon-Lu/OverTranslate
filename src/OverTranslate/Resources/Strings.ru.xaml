@@ -195,6 +195,8 @@
     <sys:String x:Key="S.Toolbar.Translating">Перевод...</sys:String>
     <sys:String x:Key="S.Toolbar.Recognising">Распознавание...</sys:String>
     <sys:String x:Key="S.Toolbar.Retranslate">Перевести заново</sys:String>
+    <sys:String x:Key="S.Toolbar.EditSelection">Изменить выделение</sys:String>
+    <sys:String x:Key="S.Toolbar.EditSelectionHint">Вернуться к выделению и изменить его</sys:String>
     <sys:String x:Key="S.Toolbar.ShowSource">Показать оригинал</sys:String>
     <sys:String x:Key="S.Toolbar.ShowTranslation">Показать перевод</sys:String>
     <sys:String x:Key="S.Toolbar.CopyText">Копировать текст</sys:String>

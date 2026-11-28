@@ -198,6 +198,8 @@
     <sys:String x:Key="S.Toolbar.Translating">翻译中...</sys:String>
     <sys:String x:Key="S.Toolbar.Recognising">识别中...</sys:String>
     <sys:String x:Key="S.Toolbar.Retranslate">重新翻译</sys:String>
+    <sys:String x:Key="S.Toolbar.EditSelection">编辑框选范围</sys:String>
+    <sys:String x:Key="S.Toolbar.EditSelectionHint">返回框选画面进行修改</sys:String>
     <sys:String x:Key="S.Toolbar.ShowSource">显示原文</sys:String>
     <sys:String x:Key="S.Toolbar.ShowTranslation">显示译文</sys:String>
     <sys:String x:Key="S.Toolbar.CopyText">复制文字</sys:String>

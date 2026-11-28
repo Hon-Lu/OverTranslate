@@ -340,26 +340,93 @@
                             </Grid>
                         </Border>
 
-                        <!-- Translate -->
-                        <Button x:Name="TranslateBtn"
-                                Style="{StaticResource ToolbarPrimaryButton}"
-                                Margin="10,0,0,0"
-                                Click="TranslateBtn_Click">
+                        <!-- Translate, and once a translation is on screen 編輯框選範圍 grown beside it:
+                             one pill, two buttons. The way back to the box sits on the button the eye is
+                             already on when the bubbles land, and costs the screen nothing — a frame
+                             left up after translating got in the way of comparing the result, and was
+                             easy to catch by accident. See ToolbarWindow.TranslateButton.cs. -->
+                        <Grid x:Name="TranslatePill"
+                              Margin="10,0,0,0"
+                              VerticalAlignment="Center">
+                            <!-- The glow of the old single pill, now under both halves at once, so the
+                                 two read as one shape: a twin, because an Effect on the buttons would
+                                 cost their labels ClearType. Same blue in both themes, as before. -->
+                            <Border Background="{DynamicResource ToolbarPrimaryBg}"
+                                    Margin="3"
+                                    CornerRadius="13">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="14" ShadowDepth="0" Opacity="0.5" Color="#3B82F6"/>
+                                </Border.Effect>
+                            </Border>
+
                             <StackPanel Orientation="Horizontal">
-                                <!-- Drawn rather than typed: there is no sparkle in Segoe MDL2, which is all
-                                     Windows 10 has, and a missing glyph on the primary button is the worst
-                                     place for one. -->
-                                <Path Width="13" Height="13"
-                                      Stretch="None"
-                                      VerticalAlignment="Center"
-                                      Margin="0,0,6,0"
-                                      Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                      Data="M7,0.6 C7.7,4.2 9.8,6.3 13.4,7 C9.8,7.7 7.7,9.8 7,13.4 C6.3,9.8 4.2,7.7 0.6,7 C4.2,6.3 6.3,4.2 7,0.6 Z M12.1,9.6 C12.3,10.8 12.6,11.1 13.8,11.3 C12.6,11.5 12.3,11.8 12.1,13 C11.9,11.8 11.6,11.5 10.4,11.3 C11.6,11.1 11.9,10.8 12.1,9.6 Z"/>
-                                <TextBlock x:Name="TranslateLabel"
-                                           VerticalAlignment="Center"
-                                           Text="{DynamicResource S.Toolbar.Translate}"/>
+                                <Button x:Name="TranslateBtn"
+                                        Style="{StaticResource ToolbarPrimaryMainHalf}"
+                                        Click="TranslateBtn_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <!-- Drawn on the 16 grid of the action icons and shown at 14.
+                                             文A to translate, a looping arrow to translate again, the
+                                             same arrow turning while it runs. Drawn rather than typed:
+                                             Windows 10 has neither in its icon font. -->
+                                        <Viewbox x:Name="TranslateGlyphBox"
+                                                 Width="14" Height="14"
+                                                 Margin="0,0,6,0"
+                                                 VerticalAlignment="Center"
+                                                 RenderTransformOrigin="0.5,0.5">
+                                            <Viewbox.RenderTransform>
+                                                <RotateTransform x:Name="TranslateGlyphSpin"/>
+                                            </Viewbox.RenderTransform>
+                                            <Canvas Width="16" Height="16">
+                                                <Path x:Name="TranslateGlyph"
+                                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                      StrokeThickness="1.4"
+                                                      StrokeStartLineCap="Round"
+                                                      StrokeEndLineCap="Round"
+                                                      StrokeLineJoin="Round"/>
+                                            </Canvas>
+                                        </Viewbox>
+                                        <TextBlock x:Name="TranslateLabel"
+                                                   VerticalAlignment="Center"
+                                                   Text="{DynamicResource S.Toolbar.Translate}"/>
+                                    </StackPanel>
+                                </Button>
+
+                                <!-- Grown in by its layout width, 0 to the button's 33: the label beside
+                                     it never moves, so it never goes through WPF's blurred rendering of
+                                     text in motion. -->
+                                <Border x:Name="EditSelectionSlot"
+                                        Width="0"
+                                        ClipToBounds="True">
+                                    <Button x:Name="EditSelectionBtn"
+                                            Style="{StaticResource ToolbarPrimarySideHalf}"
+                                            HorizontalAlignment="Left"
+                                            IsTabStop="False"
+                                            AutomationProperties.Name="{DynamicResource S.Toolbar.EditSelection}"
+                                            ToolTip="{DynamicResource S.Toolbar.EditSelectionHint}"
+                                            Click="EditSelectionBtn_Click">
+                                        <Grid x:Name="EditSelectionInk" Opacity="0">
+                                            <Rectangle Width="1"
+                                                       Margin="0,8"
+                                                       HorizontalAlignment="Left"
+                                                       Fill="#59FFFFFF"/>
+                                            <!-- The four corners of the box, the pen taking the last one:
+                                                 the selection, to be edited. -->
+                                            <Canvas Width="16" Height="16"
+                                                    Margin="-1,0,0,0"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center">
+                                                <Path Stroke="{DynamicResource ToolbarPrimaryFg}"
+                                                      StrokeThickness="1.3"
+                                                      StrokeStartLineCap="Round"
+                                                      StrokeEndLineCap="Round"
+                                                      StrokeLineJoin="Round"
+                                                      Data="M1.8,5.6 V3.2 A1.4,1.4 0 0 1 3.2,1.8 H5.6 M10.4,1.8 H12.8 A1.4,1.4 0 0 1 14.2,3.2 V5.6 M5.6,14.2 H3.2 A1.4,1.4 0 0 1 1.8,12.8 V10.4 M12.94,8.4 A0.9,0.9 0 0 1 14.2,9.66 L9.88,13.98 L8.2,14.4 L8.62,12.72 Z"/>
+                                            </Canvas>
+                                        </Grid>
+                                    </Button>
+                                </Border>
                             </StackPanel>
-                        </Button>
+                        </Grid>
 
                         <!-- The bar is two halves and this is where they meet: everything left of the
                              rule is what the translation will be run with, everything right of it is

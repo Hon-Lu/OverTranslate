@@ -30,6 +30,9 @@ public partial class ToolbarWindow
         Labels.Add(VerticalSeg,
             () => LocalizationService.Get("S.Toolbar.DirectionVertical"),
             () => LocalizationService.Get("S.Toolbar.DirectionVerticalHint"));
+        Labels.Add(EditSelectionBtn,
+            () => LocalizationService.Get("S.Toolbar.EditSelection"),
+            () => LocalizationService.Get("S.Toolbar.EditSelectionHint"));
         Labels.Add(ToggleBtn,
             () => LocalizationService.Get(_bubblesVisible ? "S.Toolbar.ShowSource" : "S.Toolbar.ShowTranslation"),
             () => LocalizationService.Get(_bubblesVisible ? "S.Toolbar.ShowSourceHint" : "S.Toolbar.ShowTranslationHint"));
