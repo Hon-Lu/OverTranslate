@@ -192,10 +192,6 @@ public partial class RealtimePage : UserControl
         RealtimeSessionController.Instance.LanguagesChanged += OnSessionLanguagesChanged;
         RealtimeSessionController.Instance.AppearanceChanged += OnSessionAppearanceChanged;
 
-        // A framing picked in 翻譯區域預設 turns this page's capture source to the screen or window it
-        // was drawn on, so 選取翻譯區塊 opens right onto it.
-        FramingCard.Selected += OnFramingSelected;
-
         // The direction is set on the edit layer, which says so through MangaModelOptions.
         MangaModelOptions.Changed += OnMangaModelOptionsChanged;
         RenderMangaHint();
@@ -335,6 +331,7 @@ public partial class RealtimePage : UserControl
         RenderPauseHint();
         ProfilesCard.Reload();
         FramingCard.Reload();
+        SyncFramingTarget();
         RenderState();
     }
 
@@ -369,7 +366,6 @@ public partial class RealtimePage : UserControl
         // A static event: left attached, it would keep this page and the closed window around it alive.
         MangaModelOptions.Changed -= OnMangaModelOptionsChanged;
         ProfilesCard.Teardown();
-        FramingCard.Selected -= OnFramingSelected;
         FramingCard.Teardown();
     }
 
@@ -478,10 +474,13 @@ public partial class RealtimePage : UserControl
         WindowPickerPanel.Visibility = window ? Visibility.Visible : Visibility.Collapsed;
         ScreenPanel.Visibility = window ? Visibility.Collapsed : Visibility.Visible;
 
-        if (!window || _windowsLoaded) return;
+        if (window && !_windowsLoaded)
+        {
+            _windowsLoaded = true;
+            LoadWindows();
+        }
 
-        _windowsLoaded = true;
-        LoadWindows();
+        SyncFramingTarget();
     }
 
     private void RefreshWindowsBtn_Click(object sender, RoutedEventArgs e) => LoadWindows();
@@ -530,6 +529,7 @@ public partial class RealtimePage : UserControl
         _restoringSource = false;
 
         RenderWindowChoice(items.Count);
+        SyncFramingTarget();
     }
 
     private void WindowBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -546,6 +546,7 @@ public partial class RealtimePage : UserControl
         }
 
         RenderWindowChoice((WindowBox.ItemsSource as IReadOnlyList<WindowItem>)?.Count ?? 0);
+        SyncFramingTarget();
     }
 
     /// <summary>
@@ -663,105 +664,49 @@ public partial class RealtimePage : UserControl
     /// </remarks>
     private void ScreenBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        SyncFramingTarget();
         if (_restoringSource || ScreenBox.SelectedValue is not string deviceName) return;
 
         SaveTranslationPreference(settings => settings.Realtime.CaptureScreenDeviceName = deviceName);
     }
 
     /// <summary>
-    /// A 翻譯區域預設 picked in the card: turns this page's capture source to the screen or window the
-    /// framing was drawn on, so 選取翻譯區塊 opens onto those blocks, and says why when it cannot.
+    /// Tells the 翻譯區域預設 card which screen or window 步驟 1／2 has chosen, so its upper half lists
+    /// that target's presets — described as a session started now would describe it.
     /// </summary>
     /// <remarks>
-    /// The pick is already in the settings file by the time this runs, whether or not the source can
-    /// be turned to it: a monitor that is unplugged now may be back next time, and the choice is the
-    /// user's. What is refused here is only the immediate switch, with the reason — the alternative
-    /// would be a page that looks ready and a session that opens without the framing just picked.
-    ///
-    /// Both branches go through the page's own controls rather than writing the settings directly, so
-    /// the picker shows what it is about to use and the same three stored values (capture mode, screen
-    /// device, window process and title) are written the way a pick by hand writes them.
+    /// A window is read afresh: its size and executable decide which presets are its, and both can
+    /// have changed since the list was built. Null while 視窗擷取 has no window, or it has gone.
     /// </remarks>
-    private void OnFramingSelected(object? sender, RealtimeFramingPreset preset)
+    private void SyncFramingTarget()
     {
-        if (RealtimeSessionController.Instance.IsActive) return;
+        // Fires during InitializeComponent, before the card exists.
+        if (FramingCard is null || WindowPickerPanel is null) return;
 
-        if (preset.IsForWindow)
-        {
-            if (CaptureWindowList.FindStored(
-                    CaptureWindowList.Enumerate(), preset.WindowProcess, preset.WindowTitle) is not { } window)
-            {
-                SetStatus(LocalizationService.Get("S.Realtime.WindowCaptureGone"), isError: true);
-                return;
-            }
-
-            // A window preset's blocks are relative to the window, so where it is and which screen it
-            // is on do not matter; the size does, and a window of another size is not its target.
-            var bounds = CaptureWindowList.CaptureBounds(window.Hwnd);
-            if (bounds.Width <= 0 || bounds.Height <= 0 ||
-                preset.WindowSize.Width != bounds.Width || preset.WindowSize.Height != bounds.Height)
-            {
-                ShowFramingWindowChanged(preset);
-                return;
-            }
-
-            WindowModeRadio.IsChecked = true;
-            // Always a fresh list: the window may have opened since the picker last looked, and this
-            // is the moment the user is asking for that window by name.
-            LoadWindows();
-            if ((WindowBox.ItemsSource as IReadOnlyList<WindowItem>)
-                    ?.FirstOrDefault(item => item.Hwnd == window.Hwnd) is not { } picked)
-            {
-                SetStatus(LocalizationService.Get("S.Realtime.WindowCaptureGone"), isError: true);
-                return;
-            }
-
-            WindowBox.SelectedItem = picked;
-        }
-        else
-        {
-            var screen = Array.Find(Screen.AllScreens,
-                candidate => candidate.DeviceName == preset.ScreenDeviceName);
-            if (screen is null)
-            {
-                SetStatus(LocalizationService.Get("S.Realtime.FramingScreenGone"), isError: true);
-                return;
-            }
-
-            if (screen.Bounds != preset.Screen.ToRectangle())
-            {
-                ShowFramingScreenChanged(preset);
-                return;
-            }
-
-            ScreenModeRadio.IsChecked = true;
-            ScreenBox.SelectedValue = screen.DeviceName;
-        }
-
-        SetStatus(
-            LocalizationService.Format("S.Realtime.FramingChosen", RealtimeFramingDisplay.Name(preset)),
-            isError: false);
+        FramingCard.SetTarget(FramingTarget());
     }
 
-    /// <summary>
-    /// Says a framing was drawn at another size than the screen it is being picked on — the blocks
-    /// are physical pixels, so that layout means nothing here.
-    /// </summary>
-    private void ShowFramingScreenChanged(RealtimeFramingPreset preset) =>
-        SetStatus(
-            LocalizationService.Format(
-                "S.Realtime.FramingScreenChanged", preset.Screen.Width, preset.Screen.Height),
-            isError: true);
+    private RealtimeFramingStore.Target? FramingTarget()
+    {
+        if (!WindowMode)
+        {
+            return ScreenBox.SelectedItem is ScreenItem screen
+                ? new RealtimeFramingStore.Target(RealtimeCaptureMode.Screen, screen.Bounds, screen.DeviceName)
+                : null;
+        }
 
-    /// <summary>
-    /// Says a window framing was drawn for a window of another size — its blocks are relative to the
-    /// window, so a resize changes what they cover.
-    /// </summary>
-    private void ShowFramingWindowChanged(RealtimeFramingPreset preset) =>
-        SetStatus(
-            LocalizationService.Format(
-                "S.Realtime.FramingWindowChanged", preset.WindowSize.Width, preset.WindowSize.Height),
-            isError: true);
+        if (WindowBox.SelectedItem is not WindowItem item || ScreenOf(item.Hwnd) is not { } on) return null;
+
+        var described = CaptureWindowList.Of(item.Hwnd);
+        return new RealtimeFramingStore.Target(
+            RealtimeCaptureMode.Window,
+            on.Bounds,
+            on.DeviceName,
+            described?.ProcessName ?? item.ProcessName,
+            described?.Title ?? item.Display,
+            CaptureWindowList.CaptureBounds(item.Hwnd),
+            CaptureWindowList.ExecutablePathOf(item.Hwnd));
+    }
 
     private string? CurrentScreenDeviceName(IReadOnlyList<ScreenItem> items)
     {
@@ -1244,7 +1189,6 @@ public partial class RealtimePage : UserControl
         TgtLangBox.IsEnabled = !active;
         ProviderBox.IsEnabled = !active;
         ScreenBox.IsEnabled = !active;
-
         // Nothing can start without a source language, so the button says so by being unavailable
         // rather than by refusing after the fact, and the field keeps its prompt until answered.
         var hasSource = SrcLangBox.SelectedValue is string;

@@ -21,8 +21,8 @@ namespace OverTranslate.Services;
 /// pair is not another Han language.
 ///
 /// A tie is an honest answer, not a failure. It means either that the text is in neither language,
-/// or that the pair shares a script — 英文／法文, 繁體／簡體 — and there is nothing in the characters
-/// to separate them. The caller translates into the first language, which is what the settings panel
+/// or that the pair shares a script — 英文／法文, 繁體／簡體 — and nothing in this text separates them
+/// (<see cref="ResolveSharedScript"/> tries). The caller translates into the first language, which is what the settings panel
 /// already promises for anything unrecognised, and the engine's own reported source language settles
 /// it afterwards where it can.
 /// </remarks>
@@ -56,17 +56,18 @@ internal static class BilingualDirection
     }
 
     /// <summary>
-    /// Separates a pair that is written in one script, in the one case where that is possible.
+    /// Separates a pair that is written in one script, where the text gives that away.
     /// </summary>
     /// <remarks>
-    /// 繁體／簡體 is the one shared-script pair this application's readers plausibly set, and it is
-    /// also the one that can be settled locally: OpenCC is already here for the dictionary, and its
-    /// <c>ZhoCheck</c> is the same test 繁簡轉換 relies on. Two Latin languages or two Cyrillic ones
-    /// have no such tell and are left to the engine.
+    /// 繁體／簡體 is settled by OpenCC, already here for the dictionary; its <c>ZhoCheck</c> is the
+    /// same test 繁簡轉換 relies on. Two of 英文, 法文, 德文, 西班牙文, 義大利文 and 葡萄牙文 are told
+    /// apart by <see cref="LatinLanguageHints"/> when the text is long enough to carry a function
+    /// word or an accented letter only one of them writes; a single word mostly is not, and stays
+    /// undecided for the engine. Two Cyrillic languages are left to the engine.
     /// </remarks>
     private static string? ResolveSharedScript(string text, string first, string second)
     {
-        if (!IsChineseVariantPair(first, second)) return null;
+        if (!IsChineseVariantPair(first, second)) return LatinLanguageHints.Resolve(text, first, second);
 
         return Opencc.ZhoCheck(text) switch
         {

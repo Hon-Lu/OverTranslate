@@ -519,6 +519,7 @@
             <settings:DiagnosticNoteOverlay Grid.ColumnSpan="2" x:Name="DiagnosticNote"/>
             <settings:QuickTranslateSettingsOverlay Grid.ColumnSpan="2" x:Name="QuickTranslateSettings"/>
             <realtime:RealtimeProfileOverlay Grid.ColumnSpan="2" x:Name="RealtimeProfiles"/>
+            <realtime:RealtimeFramingOverlay Grid.ColumnSpan="2" x:Name="RealtimeFramings"/>
             <settings:GlossaryOverlay Grid.ColumnSpan="2" x:Name="Glossary"/>
             <!-- Last: it is opened from the AI translation panel inside ServiceSettings too. -->
             <settings:AssetsLocationOverlay Grid.ColumnSpan="2" x:Name="AssetsLocation"/>

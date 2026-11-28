@@ -1,5 +1,6 @@
 using OverTranslate.Models;
 using OverTranslate.Services;
+using OverTranslate.Services.Realtime;
 using Screen = System.Windows.Forms.Screen;
 
 namespace OverTranslate.Views.Realtime;
@@ -38,20 +39,83 @@ internal static class RealtimeFramingDisplay
         return name.Length > 0 ? name : AutomaticName(preset);
     }
 
+    /// <summary>How much of a name a sentence on the bar carries, in characters.</summary>
+    /// <remarks>
+    /// A name runs to 60 characters, and the bar's message is one line with a cap on its width. Cut
+    /// in the name rather than at the end of the sentence, so that what follows it — 未儲存的修改已捨棄
+    /// — is still read.
+    /// </remarks>
+    private const int MaxMessageNameLength = 16;
+
     /// <summary>
-    /// The name a preset carries while the user has not given it one — 螢幕 1 · 2560×1440, the
-    /// window's title, and （2）, （3） on a target's second and later presets.
+    /// <see cref="Name"/> as a sentence on the bar quotes it: the first
+    /// <see cref="MaxMessageNameLength"/> characters and …, when it is longer.
     /// </summary>
-    public static string AutomaticName(RealtimeFramingPreset preset)
+    public static string MessageName(RealtimeFramingPreset preset)
     {
-        var name = TargetName(preset);
-        return preset.Ordinal > 1
-            ? LocalizationService.Format("S.Realtime.FramingNumbered", name, preset.Ordinal)
-            : name;
+        var name = Name(preset);
+        return name.Length > MaxMessageNameLength ? name[..MaxMessageNameLength].TrimEnd() + "…" : name;
     }
 
-    /// <summary>The target's own name, before the numbering a second preset of it takes.</summary>
-    private static string TargetName(RealtimeFramingPreset preset)
+    /// <summary>The second line of a row in the bar's list: how many blocks, nothing else.</summary>
+    public static string BlockCount(RealtimeFramingPreset preset) =>
+        LocalizationService.Format("S.Realtime.FramingBlocksShort", preset.Blocks.Count);
+
+    /// <summary>
+    /// Why a preset of this monitor or application cannot be placed now, as the list says it under
+    /// the name: the size the screen or window has now, or that the window reaches another screen.
+    /// </summary>
+    public static string Unusable(RealtimeFramingStore.Miss why, RealtimeFramingStore.Target target) =>
+        why switch
+        {
+            RealtimeFramingStore.Miss.OffScreen => LocalizationService.Get("S.Realtime.FramingOffScreenShort"),
+            RealtimeFramingStore.Miss.WindowSize => LocalizationService.Format(
+                "S.Realtime.FramingWindowSizeDiffers", target.WindowBounds.Width, target.WindowBounds.Height),
+            _ => LocalizationService.Format(
+                "S.Realtime.FramingScreenSizeDiffers", target.Screen.Width, target.Screen.Height),
+        };
+
+    /// <summary>
+    /// The name a preset carries while the user has not given it one: 預設 N, N its number among its
+    /// target's presets.
+    /// </summary>
+    /// <remarks>
+    /// Short rather than the target's own name: everywhere a preset is named, the target is already
+    /// said beside it — under the bar's list title, over the page's list, in the line under a row of
+    /// 其他螢幕或視窗 — and a window title repeated in every row read as the same row over and over.
+    /// </remarks>
+    public static string AutomaticName(RealtimeFramingPreset preset) =>
+        LocalizationService.Format("S.Realtime.FramingAutoName", Math.Max(1, preset.Ordinal));
+
+    /// <summary>Whether <paramref name="preset"/> goes by <see cref="AutomaticName"/>, not one the user gave.</summary>
+    public static bool IsAutomaticallyNamed(RealtimeFramingPreset preset) =>
+        (preset.Name ?? "").Trim().Length == 0;
+
+    /// <summary>
+    /// The target as a sentence names it in passing: 螢幕 1, or the window's title — without the
+    /// resolution or the program <see cref="Caption"/> adds.
+    /// </summary>
+    public static string ShortTargetName(RealtimeFramingPreset preset)
+    {
+        if (preset.IsForWindow) return TargetName(preset);
+
+        var screens = Screen.AllScreens;
+        int index = Array.FindIndex(screens, screen => screen.DeviceName == preset.ScreenDeviceName);
+        return index >= 0
+            ? LocalizationService.Format("S.Realtime.FramingScreenShort", index + 1)
+            : LocalizationService.Format("S.Realtime.FramingScreenName", preset.Screen.Width, preset.Screen.Height);
+    }
+
+    /// <summary>
+    /// The question 刪除 asks: the name, and — for a 預設 N, which many targets share — whose it is.
+    /// </summary>
+    public static string DeleteQuestion(RealtimeFramingPreset preset) =>
+        IsAutomaticallyNamed(preset)
+            ? LocalizationService.Format("S.Realtime.FramingDeleteConfirmTarget", Name(preset), ShortTargetName(preset))
+            : LocalizationService.Format("S.Realtime.FramingDeleteConfirm", Name(preset));
+
+    /// <summary>The target's own name: the monitor as the picker names it, or the window's title.</summary>
+    public static string TargetName(RealtimeFramingPreset preset)
     {
         if (preset.IsForWindow)
         {
@@ -62,23 +126,85 @@ internal static class RealtimeFramingDisplay
             return process.Length > 0 ? process : LocalizationService.Get("S.Realtime.FramingsWindowUnknown");
         }
 
+        // The monitor's number and 主螢幕 as it is now, but the resolution the framing was saved at:
+        // a framing kept at another resolution is listed greyed beside the monitor's current size,
+        // and naming it by that size would make the two read the same.
         return ScreenOf(preset) is { } screen
-            ? ScreenLabel(screen)
+            ? ScreenLabel(screen, preset.Screen.Width, preset.Screen.Height)
             : LocalizationService.Format("S.Realtime.FramingScreenName", preset.Screen.Width, preset.Screen.Height);
     }
 
     /// <summary>
-    /// The line under the name: how many blocks the framing keeps, and for a window the application
-    /// they were drawn over.
+    /// The line under a name on the page's card, for a preset of the screen or window chosen there:
+    /// the size it was saved at and how many blocks — 1600×900 · 2 個區塊. The target itself is
+    /// already named above the list.
     /// </summary>
-    public static string Detail(RealtimeFramingPreset preset)
+    public static string SizeAndBlocks(RealtimeFramingPreset preset)
     {
-        var blocks = LocalizationService.Format("S.Realtime.FramingBlockCount", preset.Blocks.Count);
+        var size = preset.IsForWindow
+            ? $"{preset.WindowSize.Width}×{preset.WindowSize.Height}"
+            : $"{preset.Screen.Width}×{preset.Screen.Height}";
+        return $"{size} · {BlockCount(preset)}";
+    }
 
-        var process = (preset.WindowProcess ?? "").Trim();
-        return preset.IsForWindow && process.Length > 0
-            ? $"{LocalizationService.Format("S.Realtime.CaptureWindowDetail", process)} · {blocks}"
-            : blocks;
+    /// <summary>
+    /// The same line for a preset under 其他螢幕或視窗, where nothing above says whose it is: the
+    /// target's name first — 螢幕 2 · 1920×1080 · 1 個區塊, or a window's title, size and blocks.
+    /// </summary>
+    public static string OtherDetail(RealtimeFramingPreset preset) =>
+        preset.IsForWindow
+            ? $"{TargetName(preset)} · {SizeAndBlocks(preset)}"
+            : $"{TargetName(preset)} · {BlockCount(preset)}";
+
+    /// <summary>
+    /// What the card's upper half is headed with: the monitor as the screen picker names it, or the
+    /// window's title and the program it belongs to — Summer Pockets · SiglusEngine.exe.
+    /// </summary>
+    public static string Caption(RealtimeFramingStore.Target target)
+    {
+        if (!target.IsWindow)
+        {
+            return Array.Find(Screen.AllScreens, screen => screen.DeviceName == target.DeviceName) is { } screen
+                ? ScreenLabel(screen)
+                : LocalizationService.Format("S.Realtime.FramingScreenName", target.Screen.Width, target.Screen.Height);
+        }
+
+        var title = (target.WindowTitle ?? "").Trim();
+        var program = ProgramName(target.WindowProcess, target.WindowPath);
+        if (title.Length == 0) return program.Length > 0 ? program : LocalizationService.Get("S.Realtime.FramingsWindowUnknown");
+        return program.Length > 0 ? $"{Shorten(title)} · {program}" : Shorten(title);
+    }
+
+    /// <summary>
+    /// What the edit window says a preset belongs to, beside its picture: the target as
+    /// <see cref="Caption"/> names one, then <see cref="SizeAndBlocks"/>.
+    /// </summary>
+    public static string EditDetail(RealtimeFramingPreset preset)
+    {
+        var program = preset.IsForWindow ? ProgramName(preset.WindowProcess, preset.WindowPath) : "";
+        var target = program.Length > 0 && !string.Equals(program, TargetName(preset), StringComparison.Ordinal)
+            ? $"{TargetName(preset)} · {program}"
+            : TargetName(preset);
+        return preset.IsForWindow
+            ? $"{target} · {SizeAndBlocks(preset)}"
+            : $"{target} · {BlockCount(preset)}";
+    }
+
+    /// <summary>The executable's file name, from its path where it was read, else the process name.</summary>
+    private static string ProgramName(string? process, string? path)
+    {
+        try
+        {
+            var file = System.IO.Path.GetFileName((path ?? "").Trim());
+            if (file.Length > 0) return file;
+        }
+        catch (ArgumentException)
+        {
+            // A path the file system would not take: the process name below says the same.
+        }
+
+        var name = (process ?? "").Trim();
+        return name.Length > 0 ? name + ".exe" : "";
     }
 
     /// <summary>
@@ -103,14 +229,18 @@ internal static class RealtimeFramingDisplay
     /// The same wording the page's screen picker uses, so the two name a monitor identically — see
     /// <c>RealtimePage</c>, which names a monitor for the framing line.
     /// </summary>
-    public static string ScreenLabel(Screen screen)
+    public static string ScreenLabel(Screen screen) =>
+        ScreenLabel(screen, screen.Bounds.Width, screen.Bounds.Height);
+
+    /// <summary><see cref="ScreenLabel(Screen)"/> with another resolution in place of the monitor's own.</summary>
+    private static string ScreenLabel(Screen screen, int width, int height)
     {
         var screens = Screen.AllScreens;
         var index = Array.FindIndex(screens, candidate => candidate.DeviceName == screen.DeviceName);
 
         return LocalizationService.Format(
             screen.Primary ? "S.Realtime.ScreenItemPrimary" : "S.Realtime.ScreenItem",
-            index + 1, screen.Bounds.Width, screen.Bounds.Height);
+            index + 1, width, height);
     }
 
     private static string Shorten(string title) =>

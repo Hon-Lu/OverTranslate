@@ -1822,7 +1822,7 @@ public partial class OverlayWindow : Window
     // No height test of its own — SourceFontScale fades the boost out with height, so gating it
     // here too would put back a step at whatever height the gate used.
     private bool IsLatinSourceToCjkTarget() =>
-        _currentSourceLanguage.Equals("EN", StringComparison.OrdinalIgnoreCase) &&
+        Services.Ocr.OcrLanguageRouter.IsLatinScript(_currentSourceLanguage) &&
         IsCjkLanguage(_currentTargetLanguage);
 
     private static bool IsCjkLanguage(string language) =>

@@ -124,6 +124,9 @@ if (args.Length > 0 && args[0] == "--detector-geometry")
 if (args.Length > 0 && args[0] == "--edge-punct")
     return EdgePunctuationProbe.Run(args.Skip(1).ToArray());
 
+if (args.Length > 0 && args[0] == "--pixel-ja")
+    return await PixelJaProbe.Run(args[1..]);
+
 if (args.Length > 0 && args[0] == "--small-kana")
     return SmallKanaProbe.Run(args.Skip(1).ToArray());
 
@@ -378,6 +381,9 @@ if (args[0] == "--fallback-test")
         Console.WriteLine($"  ZH: {t.TranslatedText}");
     return 0;
 }
+
+if (args[0] == "--bilingual") return await BilingualProbe.Run(args[1..], http);
+if (args[0] == "--xlate-source") return await BilingualProbe.TranslateFrom(args[1..], http);
 
 // Translate one line given on the command line. For telling an OCR problem from a translation
 // one: when a word goes missing on screen, this says whether the recogniser dropped it or the

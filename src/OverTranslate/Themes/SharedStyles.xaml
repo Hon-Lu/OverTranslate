@@ -401,6 +401,46 @@
          and the settings row for its shortcut. -->
     <Geometry x:Key="RealtimeCompareGlyph">M1.841,7.912 L4.256,1.875 L6.671,7.912 M2.704,5.842 L5.809,5.842 M9.863,3.772 L16.762,3.772 M9.863,6.791 L14.175,6.791 M4.256,10.069 L4.256,11.147 M1.237,11.535 L7.275,11.535 M2.316,12.139 C2.876,13.907 4.472,15.287 7.275,16.106 M6.197,12.139 C5.636,13.907 4.041,15.287 1.237,16.106 M9.863,11.794 L16.762,11.794 M9.863,14.812 L14.175,14.812</Geometry>
 
+    <!-- 顯示其餘 N 個 / 收起 as the last row of a folded list on the 即時翻譯 page (see
+         CollapsibleRows): inside the list's frame, under the same rule the rows are split by,
+         centred, in small accent text with a chevron. The whole row is the control and lightens
+         under the pointer as the rows above it do; it is a row of the list, not a button beside it,
+         so the list's one button (＋ 新增自訂模式) stays the only button. -->
+    <Style x:Key="CardListMoreRow" TargetType="Button">
+        <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Foreground" Value="{DynamicResource AppAccent}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Root" Background="Transparent" Padding="14,9"
+                            BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,1,0,0">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonHoverBg}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonHoverBg}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppButtonPressedBg}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 翻譯區域預設's 還原 and 更新, on a changed row: drawn on a 16 grid and stroked 1.4 wide with
+         round ends and joins, so the two read as one pair beside the bar's own drawn marks, which
+         the font's Undo and Save did not. 還原 an arrow turning back; 更新 a floppy disk, as Save. -->
+    <Geometry x:Key="FramingRestoreGlyph">M5.5,3.5 L2.5,6.5 L5.5,9.5 M2.8,6.5 H10 A3.5,3.5 0 0 1 10,13.5 H7</Geometry>
+    <Geometry x:Key="FramingUpdateGlyph">M2.5,3.5 A1,1 0 0 1 3.5,2.5 H10.8 L13.5,5.2 V12.5 A1,1 0 0 1 12.5,13.5 H3.5 A1,1 0 0 1 2.5,12.5 Z M5,2.5 V5.5 H10 V2.5 M5,13.5 V9.5 H11 V13.5</Geometry>
+
     <!-- 截圖翻譯: framing corners around a crosshair — the gesture the feature actually asks for
          (drag a region), not a camera, which would promise a photo rather than a translation. -->
     <Geometry x:Key="CaptureMarkGeometry">M1.4,5 V2.8 A1.4,1.4 0 0 1 2.8,1.4 H5 M11,1.4 H13.2 A1.4,1.4 0 0 1 14.6,2.8 V5 M14.6,11 V13.2 A1.4,1.4 0 0 1 13.2,14.6 H11 M5,14.6 H2.8 A1.4,1.4 0 0 1 1.4,13.2 V11 M8,5.4 V10.6 M5.4,8 H10.6</Geometry>
@@ -1813,6 +1853,83 @@
         </Setter>
     </Style>
 
+    <!-- The capture toolbar's pill once a translation is on screen: two buttons in one shape, the
+         translate half and 編輯框選範圍 grown beside it. Each half answers the pointer on its own —
+         hovering one must not light the other, or the two read as one button with two names. The
+         glow and the dimming while busy belong to the pill as a whole and are set on it, not here:
+         two glows side by side meet in a brighter seam, and two halves each dimmed would leave the
+         glow between them at full strength. -->
+    <Style x:Key="ToolbarPrimaryHalfBase" TargetType="Button" BasedOn="{StaticResource AccentButton}">
+        <Setter Property="Height"     Value="32"/>
+        <Setter Property="FontSize"   Value="12.5"/>
+        <Setter Property="Foreground" Value="{DynamicResource ToolbarPrimaryFg}"/>
+        <Setter Property="Background" Value="{DynamicResource ToolbarPrimaryBg}"/>
+    </Style>
+
+    <!-- The left half. A pill on its own until the right half grows, then square on the side it
+         meets it, with 12 rather than 14 before the rule so the rule sits as far from the label as
+         the right half's icon does from it. Driven by Tag so the code names the shape in one word. -->
+    <Style x:Key="ToolbarPrimaryMainHalf" TargetType="Button" BasedOn="{StaticResource ToolbarPrimaryHalfBase}">
+        <Setter Property="Padding" Value="14,0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="16"
+                            Padding="{TemplateBinding Padding}"
+                            RenderOptions.ClearTypeHint="Enabled">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Tag" Value="split">
+                            <Setter TargetName="Root" Property="CornerRadius" Value="16,0,0,16"/>
+                            <Setter TargetName="Root" Property="Padding" Value="14,0,12,0"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="Background"
+                                    Value="{DynamicResource ToolbarPrimaryHoverBg}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Root" Property="Background"
+                                    Value="{DynamicResource ToolbarPrimaryPressedBg}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- The right half: a 1-wide rule and a 32 square, rounded on the outer side only. The rule is
+         part of the content the toolbar gives it, not of this template, so that it fades in with the
+         icon while the blue grows in at full strength. -->
+    <Style x:Key="ToolbarPrimarySideHalf" TargetType="Button" BasedOn="{StaticResource ToolbarPrimaryHalfBase}">
+        <Setter Property="Width"   Value="33"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="0,16,16,0">
+                        <ContentPresenter/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="Background"
+                                    Value="{DynamicResource ToolbarPrimaryHoverBg}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Root" Property="Background"
+                                    Value="{DynamicResource ToolbarPrimaryPressedBg}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- A secondary action on the capture toolbar: its icon over its name, both centred. The label
          stays because none of these icons is standard enough to be read cold — and a toolbar the
          user meets mid-task, over their own screen, is the wrong place to make them hover to find
@@ -2231,6 +2348,12 @@
         <Setter Property="Height"      Value="28"/>
         <Setter Property="FontSize"    Value="13"/>
     </Style>
+
+    <!-- The 即時翻譯 bar's 翻譯區域預設 button, framing and translating alike: a framing as its list's
+         picture draws one — a frame with a caption strip and a subtitle strip — and the edge of another
+         behind it, for several kept. Stroked only: the two strips are drawn thin enough to read solid.
+         Not four corner marks, which is 截圖翻譯's own button beside it. -->
+    <Geometry x:Key="FramingsButtonGlyph">M4.2,1.8 H11.8 M3.5,4.3 H12.5 A2,2 0 0 1 14.5,6.3 V12.3 A2,2 0 0 1 12.5,14.3 H3.5 A2,2 0 0 1 1.5,12.3 V6.3 A2,2 0 0 1 3.5,4.3 Z M4.6,7.1 H7.4 V7.7 H4.6 Z M4.6,10.6 H11.4 V11.2 H4.6 Z</Geometry>
 
     <!-- Icon buttons that sit inside a raised group tray rather than directly on the bar. Their
          template is repeated rather than inherited: BasedOn cannot reach the hover and pressed
@@ -2954,6 +3077,51 @@
 
     <!-- Circular close button for the modal overlay. E8BB rather than E711, which sits 0.34px up
          and left of centre; E8BB is exactly on it. 7.5 keeps E711's 7.6px of ink at 11. -->
+    <!-- A small question asked over the window — 刪除 a mode, a framing; 編輯 a framing: a 400-wide
+         card on the scrim, a mark and a title, then what it is about, then 取消 and the action at the
+         right. One look for all of them, so a question reads the same wherever it is asked. -->
+    <Style x:Key="DialogCard" TargetType="Border">
+        <Setter Property="Width" Value="400"/>
+        <Setter Property="UseLayoutRounding" Value="True"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="Background" Value="{DynamicResource AppCardBg}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AppBorder}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Effect">
+            <Setter.Value>
+                <DropShadowEffect BlurRadius="28" ShadowDepth="6" Opacity="0.3" Color="#000000"/>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- The mark before a dialog's title: red for a question that removes something, the accent for one
+         that changes it. -->
+    <Style x:Key="DialogTitleGlyph" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets"/>
+        <Setter Property="FontSize" Value="18"/>
+        <Setter Property="Foreground" Value="{DynamicResource AppError}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="0,0,10,0"/>
+    </Style>
+
+    <Style x:Key="DialogTitle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="DialogMessage" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+        <Setter Property="FontSize" Value="{StaticResource AppFontSize}"/>
+        <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
+        <Setter Property="LineHeight" Value="20"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
     <Style x:Key="OverlayCloseButton" TargetType="Button">
         <Setter Property="FontFamily"  Value="Segoe Fluent Icons, Segoe MDL2 Assets"/>
         <Setter Property="FontSize"    Value="7.5"/>

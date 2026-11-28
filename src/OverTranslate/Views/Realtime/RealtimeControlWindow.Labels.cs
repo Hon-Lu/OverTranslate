@@ -32,13 +32,7 @@ public partial class RealtimeControlWindow
         Labels.Add(ProfilesEditBtn,
             () => LocalizationService.Get("S.Realtime.ProfileMenu"),
             () => LocalizationService.Get("S.Realtime.ProfilePanelHint"));
-        Labels.Add(SaveFramingBtn,
-            () => LocalizationService.Get("S.Realtime.FramingSave"),
-            () => LocalizationService.Get("S.Realtime.FramingSaveHint"));
         Labels.Add(FramingsEditBtn,
-            () => LocalizationService.Get("S.Realtime.Framings"),
-            () => LocalizationService.Get("S.Realtime.FramingSwitchHint"));
-        Labels.Add(FramingsRunBtn,
             () => LocalizationService.Get("S.Realtime.Framings"),
             () => LocalizationService.Get("S.Realtime.FramingSwitchHint"));
         Labels.Add(CrosshairBtn, () => LocalizationService.Get(

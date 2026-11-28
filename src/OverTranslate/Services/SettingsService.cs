@@ -185,6 +185,8 @@ public class SettingsService
             settings.Realtime.FramingPresets.Count > 0
                 ? settings.Realtime.FramingPresets
                 : ReadFramingPresetsOneByOne(root));
+        settings.Realtime.FramingSkippedTargets =
+            RealtimeSettings.CleanFramingSkipped(settings.Realtime.FramingSkippedTargets);
 
         // The lists are not in this file (see GlossaryStore): a Glossary section with lists in it,
         // written by a build between #228 and the store, is read past and dropped, and the one in
@@ -448,9 +450,14 @@ public class SettingsService
     /// and one per target.
     /// </remarks>
     /// <returns>Whether anything changed, and so was saved and announced.</returns>
-    public bool UpdateRealtimeFramingPresets(IEnumerable<RealtimeFramingPreset> presets)
+    /// <param name="skipped">
+    /// The targets chosen 不套用 for (see <see cref="RealtimeSettings.FramingSkippedTargets"/>), or
+    /// null to leave them as they are.
+    /// </param>
+    public bool UpdateRealtimeFramingPresets(
+        IEnumerable<RealtimeFramingPreset> presets, IEnumerable<string>? skipped = null)
     {
-        if (!Current.Realtime.SetFramingPresets(presets)) return false;
+        if (!Current.Realtime.SetFramingPresets(presets, skipped)) return false;
         Save();
         RealtimeFramingChanged?.Invoke(this, EventArgs.Empty);
         return true;

@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ctl="clr-namespace:OverTranslate.Controls"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
         WindowStyle="None"
         ResizeMode="NoResize"
         SizeToContent="WidthAndHeight"
@@ -11,6 +12,13 @@
         Background="Transparent">
 
     <Window.Resources>
+        <!-- The widest a message on the bar or the capsule is drawn, in DIP: room for the longest of
+             the bar's own sentences in every language (the Russian framing-paused hint, about 390),
+             and no more,
+             so a service's own error text or a 60-character name cannot carry the buttons off the
+             screen. A longer message is cut with … and shown whole in its tooltip. -->
+        <sys:Double x:Key="MessageMaxWidth">420</sys:Double>
+
         <!-- 原文對照: an A over 文, each followed by two lines of text — the original and its
              translation, kept side by side. Drawn on a 24-unit grid and baked down to the 18×18 box
              it is shown in, so the stroke is set directly: 1.05 here is 1.4 at 24. 18 rather than
@@ -143,8 +151,17 @@
                                    Foreground="{DynamicResource AppAccent}"
                                    Text="&#xE7A7;"/>
 
+                        <!-- Capped, as RunStatusText is: a message here can carry a name the user typed
+                             or an error a service wrote, and neither may push the bar's buttons off the
+                             screen. The whole sentence is in the tooltip when it is cut (see
+                             MessageText_ToolTipOpening); the placeholder ToolTip is what makes the
+                             tooltip ask at all. -->
                         <TextBlock x:Name="EditHintText"
                                    VerticalAlignment="Center"
+                                   MaxWidth="{StaticResource MessageMaxWidth}"
+                                   TextTrimming="CharacterEllipsis"
+                                   ToolTip=" "
+                                   ToolTipOpening="MessageText_ToolTipOpening"
                                    FontFamily="{DynamicResource AppFont}"
                                    FontSize="12.5"
                                    Foreground="{DynamicResource AppTextPrimary}"
@@ -196,28 +213,14 @@
                                 AutomationProperties.Name="{DynamicResource S.Realtime.ProfileMenu}"
                                 Click="ProfilesBtn_Click"/>
 
-                        <!-- 儲存框選: keep the blocks framed now for this screen or window, so the next
-                             sitting opens on them instead of on empty space. Next to 模式 because both
-                             are about the framing rather than about starting it, and outside the
-                             draw-or-start tray for the same reason 對照顯示 is. A floppy glyph because
-                             that is the one shape every user already reads as "keep this". -->
-                        <Button x:Name="SaveFramingBtn"
-                                Style="{StaticResource ToolbarIconButton}"
-                                FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                FontSize="14"
-                                Content="&#xE74E;"
-                                Margin="0,0,6,0"
-                                ToolTip="{DynamicResource S.Realtime.FramingSave}"
-                                AutomationProperties.AutomationId="RealtimeSaveFramingBtn"
-                                AutomationProperties.Name="{DynamicResource S.Realtime.FramingSave}"
-                                Click="SaveFramingBtn_Click"/>
-
-                        <!-- 翻譯區域預設: put one of the framings kept for this screen or window back on the
-                             screen, so a sitting can be framed for a subtitle strip and then for a menu
-                             without leaving the session. Next to 儲存框選 because the two are the same
-                             list seen from its two ends — one writes an entry, the other reads one.
-                             Two blocks and a chevron, drawn: the shape says "a choice of layouts", and
-                             a font glyph for that is one more thing Windows 10 may not have. -->
+                        <!-- 翻譯區域預設: the framings kept for this screen or window, to put one back on
+                             the screen — so a sitting can be framed for a subtitle strip and then for a
+                             menu without leaving the session — and, at the bottom of the same list,
+                             儲存目前框選 to keep the blocks framed now. One button for both because they
+                             are the same list seen from its two ends. Next to 模式 because both are
+                             about the framing rather than about starting it. Drawn (FramingsButtonGlyph):
+                             a framing as the list's picture shows one, with another showing behind it
+                             for several kept; not four corner marks, because 截圖翻譯 is right beside it. -->
                         <Button x:Name="FramingsEditBtn"
                                 Style="{StaticResource ToolbarIconButton}"
                                 Margin="0,0,6,0"
@@ -232,7 +235,7 @@
                                   StrokeStartLineCap="Round"
                                   StrokeEndLineCap="Round"
                                   StrokeLineJoin="Round"
-                                  Data="M2,2.5 H9.5 V6 H2 Z M2,8 H9.5 V11.5 H2 Z M12,4.5 L14,6.5 L12,8.5"/>
+                                  Data="{StaticResource FramingsButtonGlyph}"/>
                         </Button>
 
                         <!-- The two buttons the user chooses between while framing, in a tray of their
@@ -335,6 +338,9 @@
                             <TextBlock x:Name="RunStatusText"
                                        VerticalAlignment="Center"
                                        Margin="0,0,8,0"
+                                       MaxWidth="{StaticResource MessageMaxWidth}"
+                                       TextTrimming="CharacterEllipsis"
+                                       ToolTipOpening="MessageText_ToolTipOpening"
                                        FontFamily="{DynamicResource AppFont}"
                                        FontSize="12.5"
                                        Foreground="{DynamicResource AppTextPrimary}"
@@ -504,27 +510,6 @@
                                     AutomationProperties.AutomationId="RealtimeProfilesBtn"
                                     AutomationProperties.Name="{DynamicResource S.Realtime.ProfileMenu}"
                                     Click="ProfilesBtn_Click"/>
-
-                            <!-- 翻譯區域預設 while translating: the same list the framing bar shows, and
-                                 picking one restarts the blocks on it. Between 模式 and 編輯 because it
-                                 is the other thing about the blocks themselves — where they are,
-                                 where 模式 is how they are read. -->
-                            <Button x:Name="FramingsRunBtn"
-                                    Style="{StaticResource ToolbarIconButton}"
-                                    Margin="0,0,4,0"
-                                    ToolTip="{DynamicResource S.Realtime.Framings}"
-                                    AutomationProperties.AutomationId="RealtimeFramingsRunBtn"
-                                    AutomationProperties.Name="{DynamicResource S.Realtime.Framings}"
-                                    Click="FramingsBtn_Click">
-                                <Path Width="16" Height="16"
-                                      Stretch="None"
-                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                      StrokeThickness="1.2"
-                                      StrokeStartLineCap="Round"
-                                      StrokeEndLineCap="Round"
-                                      StrokeLineJoin="Round"
-                                      Data="M2,2.5 H9.5 V6 H2 Z M2,8 H9.5 V11.5 H2 Z M12,4.5 L14,6.5 L12,8.5"/>
-                            </Button>
 
                             <!-- Icon-only, like the two buttons either side of it: the capsule is meant to
                                  be read at a glance and one word set in a flat button among icons was the

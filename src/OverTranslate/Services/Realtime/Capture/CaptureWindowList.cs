@@ -207,6 +207,34 @@ public static class CaptureWindowList
         }
     }
 
+    /// <summary>
+    /// The full path of the executable behind <paramref name="hwnd"/>, or "" when it cannot be read.
+    /// </summary>
+    /// <remarks>
+    /// What tells two applications of one process name apart — every RPG Maker game is Game.exe — so
+    /// that a framing kept for one is not put on another. Asked with the limited query right, which a
+    /// process running as administrator still answers; "" is the caller's cue to fall back to the name.
+    /// </remarks>
+    public static string ExecutablePathOf(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero) return "";
+        GetWindowThreadProcessId(hwnd, out var pid);
+        if (pid == 0) return "";
+
+        var process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
+        if (process == IntPtr.Zero) return "";
+        try
+        {
+            var buffer = new StringBuilder(1024);
+            int size = buffer.Capacity;
+            return QueryFullProcessImageName(process, 0, buffer, ref size) ? buffer.ToString(0, size) : "";
+        }
+        finally
+        {
+            CloseHandle(process);
+        }
+    }
+
     private static string TextOf(IntPtr hwnd, Func<IntPtr, StringBuilder, int, int> read)
     {
         var buffer = new StringBuilder(256);
@@ -265,6 +293,19 @@ public static class CaptureWindowList
     [DllImport("dwmapi.dll")]
     private static extern int DwmGetWindowAttribute(
         IntPtr hwnd, int attribute, out int value, int size);
+
+    private const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr OpenProcess(uint access, [MarshalAs(UnmanagedType.Bool)] bool inherit, int processId);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool QueryFullProcessImageName(IntPtr process, uint flags, StringBuilder name, ref int size);
+
+    [DllImport("kernel32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool CloseHandle(IntPtr handle);
 
     [DllImport("dwmapi.dll", EntryPoint = "DwmGetWindowAttribute")]
     private static extern int DwmGetWindowAttributeRect(
