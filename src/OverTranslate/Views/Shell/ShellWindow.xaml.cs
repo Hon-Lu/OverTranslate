@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
@@ -11,6 +12,7 @@ using OverTranslate.Views.Settings;
 using OverTranslate.Views.Translation;
 // UseWindowsForms puts System.Windows.Forms in the implicit usings, so these names collide
 using Point = System.Windows.Point;
+using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using Size = System.Windows.Size;
 
 namespace OverTranslate.Views.Shell;
@@ -158,11 +160,12 @@ public partial class ShellWindow : Window
         RefreshQuickToolAvailability();
 
         // Same reasoning, and one more: the periodic check runs whether or not this window exists,
-        // so the rail has to be able to gain the row while the user is sitting in front of it.
+        // so the title bar has to be able to gain the pill while the user is sitting in front of it.
         UpdateNotifier.AvailabilityChanged += OnUpdateAvailabilityChanged;
-        RefreshUpdateAvailability();
+        UpdateCardVersion.Text = UpdateService.InstalledVersion().ToString();
+        RefreshUpdateAvailability(animate: false);
 
-        // The rail's composed strings — the update row's version and the 快速工具 rows'
+        // The composed strings — the update pill's version and the 快速工具 rows'
         // blocked-by-realtime tooltips — are set from code, so DynamicResource does not reach them
         // and they would keep the language they were built in. The settings page that changes the
         // language lives inside this window, so they are always on screen when it happens.
@@ -209,7 +212,8 @@ public partial class ShellWindow : Window
     private void OnLanguageChanged(object? sender, EventArgs e)
     {
         RefreshQuickToolAvailability();
-        RefreshUpdateAvailability();
+        RefreshUpdateAvailability(animate: false);
+        RenderUpdateCard();
         RefreshSidebarToggle();
         RefreshPinButton();
     }
@@ -226,8 +230,6 @@ public partial class ShellWindow : Window
     ///
     /// Only on a height change. Setting the image's width resizes the Auto column, which resizes
     /// the starred column beside it, which raises this event again — reacting to that would loop.
-    /// The badge is deliberately not part of the measurement: it is on its own row, so a release
-    /// appearing never resizes the mark.
     /// </remarks>
     private void MatchBrandIconToText()
     {
@@ -322,38 +324,252 @@ public partial class ShellWindow : Window
     }
 
     private void OnUpdateAvailabilityChanged(object? sender, EventArgs e) =>
-        Dispatcher.BeginInvoke(RefreshUpdateAvailability);
+        Dispatcher.BeginInvoke(() => RefreshUpdateAvailability(animate: true));
+
+    /// <summary>The title bar's update card, as a state the card is drawn from.</summary>
+    private readonly UpdateCardState _updateCard = new();
+
+    // Set when the press that closed the card was on the slot it opens from, so the click that
+    // press becomes does not open it again straight away.
+    private bool _updateCardClosedBySlot;
 
     /// <summary>
-    /// Shows or hides the rail's update badge to match what <see cref="UpdateNotifier"/> has found.
+    /// Puts the glyph or the pill in the title bar's update slot, to match what
+    /// <see cref="UpdateNotifier"/> has found.
     /// </summary>
     /// <remarks>
     /// Unaffected by 跳過此版本 by design — that choice silences the startup dialog, and taking the
-    /// badge away with it would leave a user who skipped a release with no way back to it short of
+    /// pill away with it would leave a user who skipped a release with no way back to it short of
     /// reinstalling.
     /// </remarks>
-    private void RefreshUpdateAvailability()
+    /// <param name="animate">
+    /// Whether a pill appearing now should arrive rather than be there. Only for a release found
+    /// while the window is open: one already known when it opens is part of the window appearing.
+    /// </param>
+    private void RefreshUpdateAvailability(bool animate)
     {
         var update = UpdateNotifier.Available;
         if (update is null)
         {
-            UpdateBtn.Visibility = Visibility.Collapsed;
+            UpdatePillBtn.Visibility = Visibility.Collapsed;
+            UpdateCardBtn.Visibility = Visibility.Visible;
             return;
         }
 
-        // The version is on the badge itself rather than behind a hover: it is the one piece of
-        // information that tells the user whether this is the release they already decided about.
-        // 「至」carries the relationship to the version directly above — this is where that number
-        // goes, not merely that a number exists. "v" matches that label's own formatting.
-        UpdateBtnText.Text = LocalizationService.Format("S.Shell.UpdateAvailable", update.LatestVersion);
-        UpdateBtn.Visibility = Visibility.Visible;
+        var label = LocalizationService.Format("S.Shell.UpdateAvailable", update.LatestVersion);
+        UpdatePillText.Text = label;
+        AutomationProperties.SetName(UpdatePillBtn, label);
+
+        var arriving = UpdatePillBtn.Visibility != Visibility.Visible;
+        UpdateCardBtn.Visibility = Visibility.Collapsed;
+        UpdatePillBtn.Visibility = Visibility.Visible;
+
+        if (UpdateCardPopup.IsOpen)
+        {
+            _updateCard.ReleaseFound();
+            RenderUpdateCard();
+            PlaceUpdateCard();
+        }
+
+        if (arriving && animate) PlayPillArrival();
     }
 
-    private void UpdateBtn_Click(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// Fades the pill in from slightly smaller, once. With animations turned off in Windows it
+    /// simply appears.
+    /// </summary>
+    /// <remarks>
+    /// The transform is taken off again when it ends: text under a render transform is drawn
+    /// differently, and the pill stays on screen for as long as the release goes uninstalled.
+    /// </remarks>
+    private void PlayPillArrival()
     {
-        var update = UpdateNotifier.Available;
-        if (update is null) return;
-        UpdateWindow.ShowOrActivate(update);
+        if (!SystemParameters.ClientAreaAnimation) return;
+
+        var scale = new ScaleTransform(0.9, 0.9);
+        UpdatePillBtn.RenderTransform = scale;
+
+        var duration = TimeSpan.FromMilliseconds(420);
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+        var grow = new DoubleAnimation(0.9, 1, duration) { EasingFunction = ease };
+        grow.Completed += (_, _) => UpdatePillBtn.RenderTransform = Transform.Identity;
+        scale.BeginAnimation(ScaleTransform.ScaleXProperty, grow);
+        scale.BeginAnimation(ScaleTransform.ScaleYProperty, grow);
+        UpdatePillBtn.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, duration) { EasingFunction = ease });
+    }
+
+    private void UpdateSlot_Click(object sender, RoutedEventArgs e)
+    {
+        if (_updateCardClosedBySlot)
+        {
+            _updateCardClosedBySlot = false;
+            return;
+        }
+
+        if (UpdateCardPopup.IsOpen)
+        {
+            UpdateCardPopup.IsOpen = false;
+            return;
+        }
+
+        _updateCard.Open(UpdateNotifier.Available is not null);
+        RenderUpdateCard();
+        PlaceUpdateCard();
+        UpdateCardPopup.IsOpen = true;
+    }
+
+    /// <summary>
+    /// Right edge of the card under the right edge of the slot, whichever face it shows, and the
+    /// caret under the middle of that face — the glyph fills the slot, the pill sits inside it
+    /// with a margin, so the middle is measured from the face rather than from the slot.
+    /// </summary>
+    private void PlaceUpdateCard()
+    {
+        UpdateSlot.UpdateLayout();
+        UpdateCardFrame.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        UpdateCardPopup.HorizontalOffset =
+            UpdateSlot.ActualWidth - UpdateCardFrame.DesiredSize.Width + UpdateCardFrame.Padding.Right;
+
+        FrameworkElement face = UpdatePillBtn.IsVisible ? UpdatePillBtn : UpdateCardBtn;
+        double middle = face.TranslatePoint(new Point(face.ActualWidth / 2, 0), UpdateSlot).X;
+        double fromRight = UpdateSlot.ActualWidth - middle;
+        UpdateCardCaret.Margin = new Thickness(0, 4, Math.Max(10, fromRight - UpdateCardCaret.Width / 2), 0);
+    }
+
+    /// <summary>
+    /// Grows the card out of the slot's corner. Short and without overshoot; with animations
+    /// turned off in Windows it simply appears.
+    /// </summary>
+    private void UpdateCardPopup_Opened(object? sender, EventArgs e)
+    {
+        // The face it opened from looks held down for as long as the card is up, and its tooltip
+        // would only cover the card.
+        UpdateCardBtn.SetResourceReference(BackgroundProperty, "AppButtonHoverBg");
+        UpdateCardBtn.ToolTip = null;
+
+        if (SystemParameters.ClientAreaAnimation)
+        {
+            var scale = (ScaleTransform)UpdateCardBody.RenderTransform;
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            var duration = TimeSpan.FromMilliseconds(160);
+            var grow = new DoubleAnimation(0.96, 1, duration) { EasingFunction = ease };
+            // Let go of the animated values once it has landed, so the card rests at plain scale and
+            // nothing holds its text off the pixel grid.
+            grow.Completed += (_, _) =>
+            {
+                scale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+                scale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+                UpdateCardBody.BeginAnimation(OpacityProperty, null);
+            };
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.96, 1, duration) { EasingFunction = ease });
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty, grow);
+            UpdateCardBody.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, duration) { EasingFunction = ease });
+        }
+
+        // So Esc reaches the card: the popup is its own window and has no focus of its own.
+        UpdateCardPanel.Focus();
+    }
+
+    private void UpdateCardPopup_Closed(object? sender, EventArgs e)
+    {
+        UpdateCardBtn.ClearValue(BackgroundProperty);
+        UpdateCardBtn.SetResourceReference(ToolTipProperty, "S.Shell.UpdateCard");
+
+        var slotPressed = (UpdateCardBtn.IsMouseOver || UpdatePillBtn.IsMouseOver)
+                          && Mouse.LeftButton == MouseButtonState.Pressed;
+        _updateCardClosedBySlot = slotPressed;
+    }
+
+    private void UpdateCardPanel_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape) return;
+        UpdateCardPopup.IsOpen = false;
+        (UpdatePillBtn.IsVisible ? UpdatePillBtn : UpdateCardBtn).Focus();
+        e.Handled = true;
+    }
+
+    private async void UpdateCardActionBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (_updateCard.Action == UpdateCardAction.UpdateNow)
+        {
+            var update = UpdateNotifier.Available;
+            UpdateCardPopup.IsOpen = false;
+            if (update is not null) UpdateWindow.ShowOrActivate(update);
+            return;
+        }
+
+        if (!_updateCard.BeginCheck()) return;
+        RenderUpdateCard();
+
+        // Held for a moment at least, so a feed that answers at once does not turn the line over
+        // faster than it can be read.
+        var check = UpdateNotifier.CheckAsync();
+        await Task.WhenAll(check, Task.Delay(CheckingAtLeast));
+        var result = await check;
+
+        _updateCard.CompleteCheck(result.Status, UpdateNotifier.Available is not null);
+        RenderUpdateCard();
+    }
+
+    private static readonly TimeSpan CheckingAtLeast = TimeSpan.FromMilliseconds(600);
+
+    private void UpdateCardHistoryBtn_Click(object sender, RoutedEventArgs e)
+    {
+        UpdateCardPopup.IsOpen = false;
+        UpdateWindow.ShowHistory();
+    }
+
+    /// <summary>Draws the card's second line and its button from <see cref="_updateCard"/>.</summary>
+    private void RenderUpdateCard()
+    {
+        var status = _updateCard.Status;
+
+        UpdateCardLine.Text = status switch
+        {
+            UpdateCardStatus.Checking => LocalizationService.Get("S.UpdateCard.Checking"),
+            UpdateCardStatus.UpToDate => LocalizationService.Get("S.UpdateCard.UpToDate"),
+            UpdateCardStatus.Failed   => LocalizationService.Get("S.UpdateCard.Failed"),
+            UpdateCardStatus.Found    => LocalizationService.Format(
+                "S.UpdateCard.Found", UpdateNotifier.Available?.LatestVersion ?? ""),
+            _ => UpdateNotifier.LastChecked is { } when
+                ? LocalizationService.Format("S.UpdateCard.LastChecked", UpdateCardState.FormatLastChecked(
+                    when, DateTime.Now, LocalizationService.Get("S.UpdateCard.DatePattern")))
+                : LocalizationService.Get("S.UpdateCard.AutoCheck"),
+        };
+        UpdateCardLine.SetResourceReference(TextBlock.ForegroundProperty, status switch
+        {
+            UpdateCardStatus.UpToDate => "AppSuccess",
+            UpdateCardStatus.Failed   => "AppWarning",
+            UpdateCardStatus.Found    => "AppAccent",
+            _                         => "AppTextSecondary",
+        });
+        UpdateCardLine.FontWeight = status == UpdateCardStatus.Found ? FontWeights.SemiBold : FontWeights.Normal;
+
+        var checking = status == UpdateCardStatus.Checking;
+        UpdateCardSpinner.Visibility = checking ? Visibility.Visible : Visibility.Collapsed;
+        var spin = (RotateTransform)UpdateCardSpinner.RenderTransform;
+        if (checking && SystemParameters.ClientAreaAnimation)
+        {
+            UpdateCardSpinner.Opacity = 1;
+            spin.BeginAnimation(RotateTransform.AngleProperty,
+                new DoubleAnimation(0, 360, TimeSpan.FromMilliseconds(800)) { RepeatBehavior = RepeatBehavior.Forever });
+        }
+        else
+        {
+            spin.BeginAnimation(RotateTransform.AngleProperty, null);
+            // Still, a ring that does not turn reads as stuck; fainter, it reads as an ornament.
+            UpdateCardSpinner.Opacity = checking ? 0.6 : 1;
+        }
+
+        UpdateCardActionBtn.Content = LocalizationService.Get(_updateCard.Action switch
+        {
+            UpdateCardAction.UpdateNow => "S.Update.Now",
+            UpdateCardAction.Retry     => "S.Update.Retry",
+            _                          => "S.UpdateCard.Check",
+        });
+        UpdateCardActionBtn.IsEnabled = _updateCard.ActionEnabled;
+        UpdateCardActionBtn.Style = (Style)FindResource(
+            _updateCard.Action == UpdateCardAction.UpdateNow ? "AccentButton" : "FlatButton");
     }
 
     private void MinimizeBtn_Click(object sender, RoutedEventArgs e) =>

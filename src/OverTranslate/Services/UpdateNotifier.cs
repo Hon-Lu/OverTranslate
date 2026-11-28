@@ -9,7 +9,7 @@ namespace OverTranslate.Services;
 /// goes looking for one.
 /// </summary>
 /// <remarks>
-/// It exists because the nav rail cannot own this state. <see cref="Views.Shell.ShellWindow"/> is
+/// It exists because the main window cannot own this state. <see cref="Views.Shell.ShellWindow"/> is
 /// created on demand and destroyed on close, while the application itself lives in the tray for
 /// days, so a result found at startup — or four hours into a session with no window open — has
 /// nowhere to live unless something outside the window holds it.
@@ -56,6 +56,27 @@ public static class UpdateNotifier
     public static UpdateInfo? Available { get; private set; }
 
     /// <summary>
+    /// When a check last got an answer from the feed — up to date or a release found — or null
+    /// while none has. Shared by the periodic check and the one the user asks for from the title
+    /// bar's card, which shows it; a failed check leaves it where it was, since nothing was learned.
+    /// </summary>
+    public static DateTime? LastChecked { get; private set; }
+
+    // Seams for the tests: where a check goes and what time it is.
+    internal static Func<Task<UpdateCheckResult>> Checker = UpdateService.CheckAsync;
+    internal static Func<DateTime> Clock = () => DateTime.Now;
+
+    /// <summary>Puts the state back as a fresh process has it; tests only.</summary>
+    internal static void ResetForTests()
+    {
+        Available = null;
+        LastChecked = null;
+        AvailabilityChanged = null;
+        Checker = UpdateService.CheckAsync;
+        Clock = () => DateTime.Now;
+    }
+
+    /// <summary>
     /// Raised on the UI thread when <see cref="Available"/> starts pointing at a different version.
     /// </summary>
     public static event EventHandler? AvailabilityChanged;
@@ -76,39 +97,43 @@ public static class UpdateNotifier
     }
 
     /// <summary>
-    /// Asks for the latest release and records it. Returns it, or null when there is nothing newer.
+    /// Asks for the latest release and records it, along with when the feed was last read.
     /// </summary>
-    public static async Task<UpdateInfo?> CheckAsync()
+    public static async Task<UpdateCheckResult> CheckAsync()
     {
-        UpdateInfo? info;
+        UpdateCheckResult result;
         try
         {
-            info = await UpdateService.CheckAsync();
+            result = await Checker();
         }
         catch (Exception ex)
         {
             // Nothing awaits the timer's call, so an escaping exception would otherwise be silent.
             Log.Warn(ex, "Update check failed");
-            return null;
+            return UpdateCheckResult.Failed;
         }
 
-        // A null answer means one of three things — up to date, not an installed build, or the check
-        // failed — and CheckAsync flattens all three, so the only safe reading is "learned nothing".
-        // Clearing Available on it would let one dropped connection take an update the user has
-        // already been told about back off the nav rail. Nothing is lost by keeping it: applying an
-        // update restarts the process, so a stale Available cannot outlive the version it refers to.
-        if (info is null) return null;
+        if (result.Status is UpdateCheckStatus.UpToDate or UpdateCheckStatus.Available)
+            LastChecked = Clock();
+        else if (result.Status == UpdateCheckStatus.Failed)
+            Log.Info("Update check could not reach the feed");
+
+        // Only a release found changes Available. Up to date never clears it either: the feed
+        // seeing nothing newer than this copy cannot make a release found earlier go away short of
+        // its being pulled, and applying an update restarts the process, so a stale Available cannot
+        // outlive the version it refers to. Keeping it means the title bar's pill never comes and goes.
+        if (result.Update is not { } info) return result;
 
         if (Available?.LatestVersion != info.LatestVersion)
         {
             Available = info;
             AvailabilityChanged?.Invoke(null, EventArgs.Empty);
 
-            // Fetched now so the nav rail's entry can open the window with its notes already in hand.
+            // Fetched now so the title bar's entry can open the window with its notes already in hand.
             _ = ReleaseNotesService.GetForUpdateAsync(info);
         }
 
-        return info;
+        return result;
     }
 
     /// <summary>

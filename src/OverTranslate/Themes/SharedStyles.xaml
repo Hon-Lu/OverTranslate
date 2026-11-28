@@ -2879,52 +2879,65 @@
         </Setter>
     </Style>
 
-    <!-- The rail's "there is a newer version" badge, under the version number it contradicts.
-         A badge rather than a nav row: it states a fact about this copy of the application, which
-         is what that corner of the rail is already for, and it is absent whenever the fact is not
-         true. Sizing follows the version label it hangs off (11px) rather than the nav items, so it
-         reads as an annotation on the brand block instead of a fourth destination.
-
-         Tonal fill with no accent outline. RailQuickTool's accent-tinted icon tile is what the
-         快速工具 rows use to claim the rail's actions, and competing with it here would have news
-         out-shouting the buttons the user actually came for. The border is one step up the same
-         tonal ramp — just enough to give the fill an edge on the sidebar's own background.
-
-         Fully rounded, unlike every other surface in the app at 6. That is the point: a pill is the
-         shape of a label, a 6px rectangle is the shape of a button, and this is a statement about
-         the application that happens to be clickable rather than a control the rail is offering.
-
-         Hover and press walk AppAccentSubtle's own steps rather than the neutral button greys: a
-         tinted surface that turns grey under the pointer reads as a different control appearing. -->
-    <Style x:Key="RailUpdateChip" TargetType="Button">
-        <Setter Property="FontFamily"      Value="{DynamicResource AppFont}"/>
-        <Setter Property="FontSize"        Value="10"/>
-        <Setter Property="Foreground"      Value="{DynamicResource AppAccent}"/>
-        <Setter Property="Background"      Value="{DynamicResource AppAccentSubtle}"/>
-        <Setter Property="BorderBrush"     Value="{DynamicResource AppAccentSubtleHover}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Cursor"          Value="Hand"/>
+    <!-- The title bar's "there is a newer version" pill, in the slot the 版本與更新 glyph holds
+         otherwise. The accent fill is the announcement: it is the one control in the strip at full
+         colour, and it stays that way until the release is installed — no badge to dismiss, no
+         blinking. Fully rounded, the shape of a label rather than of a 6px button, sized to sit
+         inside the 40 strip with room around it. The label is AppAccentFg because AppAccent is
+         pale in the dark theme and built to take dark text. -->
+    <Style x:Key="TitleBarUpdatePill" TargetType="Button">
+        <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+        <Setter Property="FontSize"   Value="12.5"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource AppAccentFg}"/>
+        <Setter Property="Background" Value="{DynamicResource AppAccent}"/>
+        <Setter Property="Cursor"     Value="Hand"/>
+        <Setter Property="Height"     Value="30"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="Root"
                             Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="9.5"
-                            Padding="9,0"
-                            Height="19">
-                        <ContentPresenter VerticalAlignment="Center"
-                                          HorizontalAlignment="Left"/>
+                            CornerRadius="15"
+                            Padding="11,0,13,0">
+                        <ContentPresenter VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Root" Property="Background"
-                                    Value="{DynamicResource AppAccentSubtleHover}"/>
+                                    Value="{DynamicResource AppAccentHover}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="Root" Property="Background"
-                                    Value="{DynamicResource AppAccentSubtlePressed}"/>
+                                    Value="{DynamicResource AppAccentPressed}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- A text link on the update card (更新紀錄 ›): accent text with a chevron, so it reads as
+         somewhere to go beside the card's one button. It was secondary grey once, and next to a
+         button that read as a label that had been turned off. -->
+    <Style x:Key="UpdateCardLink" TargetType="Button">
+        <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
+        <Setter Property="FontSize"   Value="12.5"/>
+        <Setter Property="Foreground" Value="{DynamicResource AppAccent}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Cursor"     Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}" Padding="2,4">
+                        <ContentPresenter VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource AppAccentHover}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource AppAccentHover}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

@@ -103,6 +103,162 @@
                      itself, this one only keeps the window on top. Quieter than the caption glyphs
                      until it is on, because it is a preference this window carries, not one of the
                      three things every window does. Content and tooltip come from RefreshPinButton. -->
+                <!-- 版本與更新, ahead of the pin: in the title bar because that is the one strip no
+                     state of the window takes away — the rail can be put away to nothing, and the
+                     announcement used to go with it. The application checks every hour on its own;
+                     this is where that is said, and where a release found is shown until it is
+                     installed.
+
+                     Two faces in one slot. Normally a quiet glyph styled as the pin beside it; once
+                     UpdateNotifier holds a release, an accent pill naming the version, there for
+                     good. Either one opens the same card, so the slot always does the same thing.
+                     The grid is what the card is placed against, so it stays put across the swap. -->
+                <Grid x:Name="UpdateSlot">
+                    <Button x:Name="UpdateCardBtn"
+                            Style="{StaticResource WindowCaptionButton}"
+                            FontSize="13"
+                            Content="&#xE895;"
+                            Foreground="{DynamicResource AppTextSecondary}"
+                            ToolTip="{DynamicResource S.Shell.UpdateCard}"
+                            AutomationProperties.Name="{DynamicResource S.Shell.UpdateCard}"
+                            Click="UpdateSlot_Click"/>
+                    <Button x:Name="UpdatePillBtn"
+                            Style="{StaticResource TitleBarUpdatePill}"
+                            Margin="0,0,6,0"
+                            VerticalAlignment="Center"
+                            Visibility="Collapsed"
+                            RenderTransformOrigin="0.5,0.5"
+                            Click="UpdateSlot_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE74A;"
+                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="12"
+                                       VerticalAlignment="Center"
+                                       Margin="0,1,7,0"/>
+                            <TextBlock x:Name="UpdatePillText" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- The card. Three lines and nothing boxed inside it; a change of state only
+                         rewrites the second line and its colour, so the card never changes size
+                         under the pointer. The frame's padding is room for the shadow inside the
+                         popup's own window.
+
+                         Set 11 below the title bar rather than right under it: the content frame's
+                         top edge runs 4 below the title bar, and a card starting there lay along
+                         that line and read as stuck to the page. Lower, the line passes behind it,
+                         and the caret reaches back up to the face it came from (see PlaceUpdateCard),
+                         which is what ties the two together. -->
+                    <Popup x:Name="UpdateCardPopup"
+                           PlacementTarget="{Binding ElementName=UpdateSlot}"
+                           Placement="Bottom"
+                           AllowsTransparency="True"
+                           StaysOpen="False"
+                           Opened="UpdateCardPopup_Opened"
+                           Closed="UpdateCardPopup_Closed">
+                        <Border x:Name="UpdateCardFrame" Padding="14,0,14,18">
+                          <Grid x:Name="UpdateCardBody" RenderTransformOrigin="1,0">
+                            <Grid.RenderTransform>
+                                <ScaleTransform/>
+                            </Grid.RenderTransform>
+                            <!-- The shadow, on an empty twin behind the card rather than on the card:
+                                 an Effect rasterises what it is set on, and the card's text would lose
+                                 ClearType and look soft beside the window's. -->
+                            <Border Width="264"
+                                    Margin="0,11,0,0"
+                                    Background="{DynamicResource UpdateCardBg}"
+                                    CornerRadius="10">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="28" ShadowDepth="8" Direction="270" Opacity="0.4"/>
+                                </Border.Effect>
+                            </Border>
+                            <Border x:Name="UpdateCardPanel"
+                                    Width="264"
+                                    Margin="0,11,0,0"
+                                    Padding="14,14,14,12"
+                                    Background="{DynamicResource UpdateCardBg}"
+                                    BorderBrush="{DynamicResource UpdateCardBorder}"
+                                    BorderThickness="1"
+                                    CornerRadius="10"
+                                    RenderOptions.ClearTypeHint="Enabled"
+                                    Focusable="True"
+                                    FocusVisualStyle="{x:Null}"
+                                    KeyDown="UpdateCardPanel_KeyDown">
+                                <StackPanel>
+                                    <TextBlock FontFamily="{DynamicResource AppFont}"
+                                               FontSize="13.5"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource AppTextPrimary}"
+                                               TextTrimming="CharacterEllipsis">
+                                        <Run Text="OverTranslate"/>
+                                        <Run x:Name="UpdateCardVersion"
+                                             FontWeight="Normal"
+                                             Foreground="{DynamicResource AppTextSecondary}"/>
+                                    </TextBlock>
+                                    <StackPanel Orientation="Horizontal"
+                                                Height="18"
+                                                Margin="0,4,0,0">
+                                        <!-- A three-quarter ring turning: drawn, because the icon
+                                             font's progress ring is not in Segoe MDL2 on Windows 10. -->
+                                        <Path x:Name="UpdateCardSpinner"
+                                              Width="10" Height="10"
+                                              Margin="0,0,6,0"
+                                              VerticalAlignment="Center"
+                                              Visibility="Collapsed"
+                                              Stroke="{DynamicResource AppTextSecondary}"
+                                              StrokeThickness="1.5"
+                                              Data="M5,0.75 A4.25,4.25 0 1 1 0.75,5"
+                                              RenderTransformOrigin="0.5,0.5">
+                                            <Path.RenderTransform>
+                                                <RotateTransform/>
+                                            </Path.RenderTransform>
+                                        </Path>
+                                        <TextBlock x:Name="UpdateCardLine"
+                                                   FontFamily="{DynamicResource AppFont}"
+                                                   FontSize="12"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   MaxWidth="234"/>
+                                    </StackPanel>
+                                    <DockPanel Margin="0,12,0,0" LastChildFill="False">
+                                        <Button x:Name="UpdateCardActionBtn"
+                                                DockPanel.Dock="Left"
+                                                Style="{StaticResource FlatButton}"
+                                                Height="28"
+                                                Padding="12,0"
+                                                FontSize="12.5"
+                                                FontWeight="SemiBold"
+                                                Click="UpdateCardActionBtn_Click"/>
+                                        <Button DockPanel.Dock="Right"
+                                                Style="{StaticResource UpdateCardLink}"
+                                                VerticalAlignment="Center"
+                                                AutomationProperties.Name="{DynamicResource S.Update.HistoryHeading}"
+                                                Click="UpdateCardHistoryBtn_Click">
+                                            <TextBlock>
+                                                <Run Text="{DynamicResource S.Update.HistoryHeading}"/>
+                                                <Run Text="›"/>
+                                            </TextBlock>
+                                        </Button>
+                                    </DockPanel>
+                                </StackPanel>
+                            </Border>
+                            <!-- The caret, pointing at the middle of whichever face opened the card;
+                                 PlaceUpdateCard sets its right margin. It overlaps the card's top edge
+                                 by a pixel so its fill opens the border where the two meet. -->
+                            <Grid x:Name="UpdateCardCaret"
+                                  Width="14" Height="8"
+                                  Margin="0,4,16,0"
+                                  HorizontalAlignment="Right"
+                                  VerticalAlignment="Top">
+                                <Path Data="M0,8 L7,1 L14,8 Z" Fill="{DynamicResource UpdateCardBg}"/>
+                                <Path Data="M0,7.5 L7,0.5 L14,7.5"
+                                      Stroke="{DynamicResource UpdateCardBorder}"
+                                      StrokeThickness="1"/>
+                            </Grid>
+                          </Grid>
+                        </Border>
+                    </Popup>
+                </Grid>
                 <Button x:Name="PinBtn"
                         Style="{StaticResource WindowCaptionButton}"
                         FontSize="12"
@@ -153,29 +309,16 @@
                      starts at the first thing the user can act on. Same reason the page's title is
                      inside its card and this is not: this names the application, not the panel.
 
-                     A two-row grid rather than nested stacks, so both of the alignments here hold
-                     themselves together instead of being maintained by hand.
-
                      The mark's height is bound to the name-and-version column beside it, which caps
                      it to exactly the block of text it belongs to — top edge on the wordmark's
                      ascender, bottom edge on the version's descender — and keeps it there if either
                      type size is ever changed. Width is left free so Stretch works the aspect ratio
-                     out; the artwork is square, so it follows.
-
-                     The badge sits on the second row of the same column as the text, so it starts
-                     on the wordmark's left edge without anyone computing an indent from the mark's
-                     width. It is deliberately outside the height binding: the mark answers to the
-                     name and version, which are always there, and not to a badge that comes and
-                     goes — otherwise the mark would resize itself every time a release appeared. -->
+                     out; the artwork is square, so it follows. -->
                 <Grid DockPanel.Dock="Top" Margin="8,10,8,16">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
 
                     <!-- These are a seed, not the final size: MatchBrandIconToText replaces both the
                          moment the text beside it has been measured, so the mark ends up exactly as
@@ -183,13 +326,13 @@
                          together — the column is Auto, so an Image left to work its own width out
                          would report the source bitmap's and take the whole rail. -->
                     <Image x:Name="BrandIcon"
-                           Grid.Row="0" Grid.Column="0"
+                           Grid.Column="0"
                            Width="38" Height="38"
                            VerticalAlignment="Top"
                            RenderOptions.BitmapScalingMode="HighQuality"/>
 
                     <StackPanel x:Name="BrandText"
-                                Grid.Row="0" Grid.Column="1"
+                                Grid.Column="1"
                                 Margin="12,0,0,0">
                         <TextBlock Text="OverTranslate"
                                    FontFamily="{DynamicResource AppFont}"
@@ -201,62 +344,6 @@
                                    FontSize="11"
                                    Foreground="{DynamicResource AppTextSecondary}"/>
                     </StackPanel>
-
-                    <!-- The application's only lasting way of saying a new version exists, and
-                         absent entirely until one does — a permanent badge reading "已是最新版本"
-                         would be a fixture that is right about nothing the user needs to act on.
-                         It sits under the version it contradicts, so the claim and its subject are
-                         read together.
-
-                         Whether it appears is driven by UpdateNotifier rather than by anything this
-                         window knows: the shell is built on demand and destroyed on close, while
-                         the check that found the release may have run hours before this window
-                         existed.
-
-                         A DockPanel inside, not a StackPanel: a horizontal StackPanel measures its
-                         children against infinite width, so the label would never trim and a long
-                         beta version string would run straight out of the rail. Docking the icon
-                         gives the label the remaining width to trim against — and the grid column
-                         is what bounds that width, so no MaxWidth has to be kept in step with the
-                         rail's own. -->
-                    <Button x:Name="UpdateBtn"
-                            Grid.Row="1" Grid.Column="1"
-                            Style="{StaticResource RailUpdateChip}"
-                            HorizontalAlignment="Left"
-                            Margin="12,6,0,0"
-                            Visibility="Collapsed"
-                            Click="UpdateBtn_Click">
-                        <DockPanel>
-                            <!-- Drawn rather than set in Segoe, because Segoe has no circled arrow
-                                 and its circled glyphs (E946, E930) lose their interior below about
-                                 14px anyway — at the 11px this line is set in, the ring survives and
-                                 whatever is inside it does not. A Canvas, not a Grid: Grid centres
-                                 each child by its own bounding box, which would drop the arrowhead
-                                 to the circle's centre instead of its upper half. Canvas keeps the
-                                 literal coordinates, and the Viewbox scales the finished 24-unit
-                                 drawing down to the size the text needs. -->
-                            <Viewbox DockPanel.Dock="Left"
-                                     Width="14" Height="14"
-                                     VerticalAlignment="Center"
-                                     Margin="0,0,6,0">
-                                <Canvas Width="24" Height="24">
-                                    <Ellipse Canvas.Left="2" Canvas.Top="2"
-                                             Width="20" Height="20"
-                                             Stroke="{DynamicResource AppAccent}"
-                                             StrokeThickness="1.75"/>
-                                    <Path Stroke="{DynamicResource AppAccent}"
-                                          StrokeThickness="1.75"
-                                          StrokeStartLineCap="Round"
-                                          StrokeEndLineCap="Round"
-                                          StrokeLineJoin="Round"
-                                          Data="M16,12 L12,8 L8,12 M12,16 L12,8"/>
-                                </Canvas>
-                            </Viewbox>
-                            <TextBlock x:Name="UpdateBtnText"
-                                       VerticalAlignment="Center"
-                                       TextTrimming="CharacterEllipsis"/>
-                        </DockPanel>
-                    </Button>
                 </Grid>
 
                 <!-- The rail's card. Nothing draws the boundary between this and the page: the gap

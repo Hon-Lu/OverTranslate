@@ -8,6 +8,9 @@
     <SolidColorBrush x:Key="AppCardBg"         Color="#FFFFFF"/>
     <SolidColorBrush x:Key="AppBorder"         Color="#E0E0E0"/>
     <SolidColorBrush x:Key="AppSubtleBorder"   Color="#EBEBEB"/>
+    <!-- The 版本與更新 card in the title bar: white like the page, so the firmer edge and the shadow are what lift it. -->
+    <SolidColorBrush x:Key="UpdateCardBg"      Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="UpdateCardBorder"  Color="#D6D6D6"/>
     <!-- The 1px between the rows of a group (Controls/AttachedRows): the section and its cards are both white here, so the seam is drawn in AppBorder's grey. -->
     <SolidColorBrush x:Key="AppRowSeam"        Color="#E0E0E0"/>
 

@@ -35,7 +35,16 @@
     <sys:String x:Key="S.Shell.Unpin">取消固定</sys:String>
     <sys:String x:Key="S.Shell.CaptureBlockedByRealtimeFraming">正在框选实时翻译区块，请先点击「开始翻译」再使用截图翻译</sys:String>
     <sys:String x:Key="S.Shell.QuickLookupBlockedByRealtime">实时翻译进行中，请先结束后再使用取词翻译</sys:String>
-    <sys:String x:Key="S.Shell.UpdateAvailable">可更新至 v{0}</sys:String>
+    <sys:String x:Key="S.Shell.UpdateAvailable">更新至 {0}</sys:String>
+    <sys:String x:Key="S.Shell.UpdateCard">版本与更新</sys:String>
+    <sys:String x:Key="S.UpdateCard.AutoCheck">每小时自动检查</sys:String>
+    <sys:String x:Key="S.UpdateCard.LastChecked">每小时自动检查・上次 {0}</sys:String>
+    <sys:String x:Key="S.UpdateCard.DatePattern">M/d</sys:String>
+    <sys:String x:Key="S.UpdateCard.Checking">正在检查…</sys:String>
+    <sys:String x:Key="S.UpdateCard.UpToDate">✓ 已是最新版本</sys:String>
+    <sys:String x:Key="S.UpdateCard.Failed">无法连接到更新服务器</sys:String>
+    <sys:String x:Key="S.UpdateCard.Found">发现新版本 {0}</sys:String>
+    <sys:String x:Key="S.UpdateCard.Check">检查更新</sys:String>
 
     <!-- ── Tray menu ── -->
     <sys:String x:Key="S.Tray.OpenWindow">打开翻译窗口</sys:String>

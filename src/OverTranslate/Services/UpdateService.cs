@@ -13,6 +13,40 @@ public sealed record UpdateInfo(
     DeltaAwareUpdateManager Manager,
     VelopackUpdateInfo VelopackInfo);
 
+/// <summary>What one update check found out.</summary>
+public enum UpdateCheckStatus
+{
+    /// <summary>The feed was read and holds nothing newer than this copy.</summary>
+    UpToDate,
+
+    /// <summary>The feed holds a newer release; see <see cref="UpdateCheckResult.Update"/>.</summary>
+    Available,
+
+    /// <summary>
+    /// Not a Velopack build — run from the IDE or unpackaged — so there is nothing to update.
+    /// The portable build is not this: it is installed as far as Velopack is concerned.
+    /// </summary>
+    NotInstalled,
+
+    /// <summary>The feed could not be read, so nothing was learned.</summary>
+    Failed,
+}
+
+/// <summary>The outcome of <see cref="UpdateService.CheckAsync()"/>.</summary>
+/// <remarks>
+/// Used to be a nullable <see cref="UpdateInfo"/>, which folded "up to date", "not installed" and
+/// "the connection failed" into one null. The periodic check can afford not to care, but a check
+/// the user asked for has to say which of them happened.
+/// </remarks>
+public sealed record UpdateCheckResult(UpdateCheckStatus Status, UpdateInfo? Update = null)
+{
+    public static readonly UpdateCheckResult UpToDate = new(UpdateCheckStatus.UpToDate);
+    public static readonly UpdateCheckResult NotInstalled = new(UpdateCheckStatus.NotInstalled);
+    public static readonly UpdateCheckResult Failed = new(UpdateCheckStatus.Failed);
+
+    public static UpdateCheckResult Found(UpdateInfo update) => new(UpdateCheckStatus.Available, update);
+}
+
 /// <summary>Where updates come from, as the environment overrides below leave it.</summary>
 public sealed record UpdateFeedSource(
     string RepositoryUrl,
@@ -168,31 +202,47 @@ public static class UpdateService
     // How many times the faked check has been asked; see OVERTRANSLATE_FAKE_UPDATE_AFTER.
     private static int _fakeCheckCount;
 
-    public static async Task<UpdateInfo?> CheckAsync()
+    public static async Task<UpdateCheckResult> CheckAsync()
     {
         var fake = CreateFakeUpdate();
         if (fake is not null)
             return fake;
 
+        DeltaAwareUpdateManager manager;
         try
         {
-            var manager = CreateManager();
-            // In-app updates are only available for the installed Velopack build.
-            if (!manager.IsInstalled)
-                return null;
-
-            var update = await manager.CheckForUpdatesAsync();
-            if (update is null)
-                return null;
-
-            return new UpdateInfo(
-                update.TargetFullRelease.Version.ToString(),
-                manager,
-                update);
+            manager = CreateManager();
         }
         catch
         {
-            return null;
+            return UpdateCheckResult.Failed;
+        }
+
+        return await CheckAsync(manager);
+    }
+
+    /// <summary>Asks <paramref name="manager"/>'s feed for a newer release and says what came of it.</summary>
+    /// <remarks>Separate from the feed it is pointed at so the classification can be tested.</remarks>
+    internal static async Task<UpdateCheckResult> CheckAsync(DeltaAwareUpdateManager manager)
+    {
+        try
+        {
+            // In-app updates are only available for the installed Velopack build.
+            if (!manager.IsInstalled)
+                return UpdateCheckResult.NotInstalled;
+
+            var update = await manager.CheckForUpdatesAsync();
+            if (update is null)
+                return UpdateCheckResult.UpToDate;
+
+            return UpdateCheckResult.Found(new UpdateInfo(
+                update.TargetFullRelease.Version.ToString(),
+                manager,
+                update));
+        }
+        catch
+        {
+            return UpdateCheckResult.Failed;
         }
     }
 
@@ -241,11 +291,12 @@ public static class UpdateService
 
     /// <summary>
     /// Pretends a release exists, when OVERTRANSLATE_FAKE_UPDATE names a version. Returns null —
-    /// meaning "check for real" — when it does not.
+    /// meaning "check for real" — when it does not, and up to date while
+    /// OVERTRANSLATE_FAKE_UPDATE_AFTER is still holding the release back.
     /// </summary>
     /// <remarks>
-    /// Everything the update notification does now — the startup dialog, 跳過此版本, the nav rail's
-    /// row, the periodic re-check — is decided before a single byte is downloaded, and none of it
+    /// Everything the update notification does now — the startup dialog, 跳過此版本, the title bar's
+    /// pill, the periodic re-check — is decided before a single byte is downloaded, and none of it
     /// can be exercised without a release to react to. Without this hook the only ways to see any of
     /// it are publishing to GitHub, which pushes the release at real users, or installing a private
     /// build, which cannot show the "no update yet" side at all. It also unblocks running from the
@@ -260,10 +311,10 @@ public static class UpdateService
     ///
     /// OVERTRANSLATE_FAKE_UPDATE_AFTER holds the release back for that many checks, which is the
     /// only way to see the half that matters most: a release that did not exist at launch has to
-    /// reach the nav rail of an already-open window without a dialog appearing. Left unset, the
+    /// reach the title bar of an already-open window without a dialog appearing. Left unset, the
     /// release is there from the first check and the startup dialog is what you get.
     /// </remarks>
-    private static UpdateInfo? CreateFakeUpdate()
+    private static UpdateCheckResult? CreateFakeUpdate()
     {
         var version = Environment.GetEnvironmentVariable("OVERTRANSLATE_FAKE_UPDATE");
         if (string.IsNullOrWhiteSpace(version))
@@ -276,7 +327,7 @@ public static class UpdateService
         if (int.TryParse(Environment.GetEnvironmentVariable("OVERTRANSLATE_FAKE_UPDATE_AFTER"), out var after)
             && checksSoFar <= after)
         {
-            return null;
+            return UpdateCheckResult.UpToDate;
         }
 
         var asset = new VelopackAsset
@@ -287,10 +338,10 @@ public static class UpdateService
             FileName = $"OverTranslate-{parsed}-full.nupkg"
         };
 
-        return new UpdateInfo(
+        return UpdateCheckResult.Found(new UpdateInfo(
             parsed.ToString(),
             CreateManager(),
-            new VelopackUpdateInfo(asset, false, null!, []));
+            new VelopackUpdateInfo(asset, false, null!, [])));
     }
 
     /// <remarks>

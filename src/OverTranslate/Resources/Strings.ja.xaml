@@ -36,7 +36,16 @@
     <sys:String x:Key="S.Shell.Unpin">ピン留めを解除</sys:String>
     <sys:String x:Key="S.Shell.CaptureBlockedByRealtimeFraming">ブロックを選択中です。「開始」を押してからキャプチャ翻訳をご利用ください</sys:String>
     <sys:String x:Key="S.Shell.QuickLookupBlockedByRealtime">リアルタイム翻訳の実行中です。終了してからポップアップ翻訳をご利用ください</sys:String>
-    <sys:String x:Key="S.Shell.UpdateAvailable">v{0} にアップデート</sys:String>
+    <sys:String x:Key="S.Shell.UpdateAvailable">{0} にアップデート</sys:String>
+    <sys:String x:Key="S.Shell.UpdateCard">バージョンとアップデート</sys:String>
+    <sys:String x:Key="S.UpdateCard.AutoCheck">1 時間ごとに自動確認</sys:String>
+    <sys:String x:Key="S.UpdateCard.LastChecked">1 時間ごとに自動確認・前回 {0}</sys:String>
+    <sys:String x:Key="S.UpdateCard.DatePattern">M/d</sys:String>
+    <sys:String x:Key="S.UpdateCard.Checking">確認中…</sys:String>
+    <sys:String x:Key="S.UpdateCard.UpToDate">✓ 最新バージョンです</sys:String>
+    <sys:String x:Key="S.UpdateCard.Failed">アップデートサーバーに接続できません</sys:String>
+    <sys:String x:Key="S.UpdateCard.Found">新しいバージョン {0} があります</sys:String>
+    <sys:String x:Key="S.UpdateCard.Check">アップデートを確認</sys:String>
 
     <!-- ── Tray menu ── -->
     <sys:String x:Key="S.Tray.OpenWindow">翻訳ウィンドウを開く</sys:String>

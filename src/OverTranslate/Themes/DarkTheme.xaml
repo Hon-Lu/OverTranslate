@@ -8,6 +8,9 @@
     <SolidColorBrush x:Key="AppCardBg"         Color="#252525"/>
     <SolidColorBrush x:Key="AppBorder"         Color="#3C3C3C"/>
     <SolidColorBrush x:Key="AppSubtleBorder"   Color="#303030"/>
+    <!-- The 版本與更新 card in the title bar: a step lighter than the content it floats over, with a firmer edge, so it reads as above the page rather than part of it. -->
+    <SolidColorBrush x:Key="UpdateCardBg"      Color="#323232"/>
+    <SolidColorBrush x:Key="UpdateCardBorder"  Color="#474747"/>
     <!-- The 1px between the rows of a group (Controls/AttachedRows): AppCardBg, the section's own fill, as if the rows were simply a pixel apart. -->
     <SolidColorBrush x:Key="AppRowSeam"        Color="#252525"/>
 
