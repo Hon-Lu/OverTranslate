@@ -1040,7 +1040,7 @@ internal sealed class RealtimeSessionController
     /// </summary>
     /// <remarks>
     /// Independent of 暫停: a paused session hidden and then resumed goes on reading unseen, and the
-    /// bar names whichever of the two the user has to undo first (RealtimeRunStatusRule).
+    /// bar says 已暫停 for the pause and lets the held-down eye say the rest (RealtimeTranslationButtonRule).
     /// </remarks>
     /// <returns>Whether there was a running session to act on.</returns>
     public bool ToggleTranslationHidden()

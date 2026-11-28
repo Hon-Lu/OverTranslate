@@ -85,7 +85,7 @@
         </Style>
     </Window.Resources>
 
-    <!-- The margin is the room the shadow is drawn in, as on the capsule and its language lists; the
+    <!-- The margin is the room the shadow is drawn in, as on the capsule and its translation panel; the
          LayoutTransform is set in code for the same mixed-DPI reason. The window is as tall as the
          panel with a picker open, and the panel sits against the capsule's side of it — see Place.
          No background: the rest of the window is fully transparent, which lets presses through. -->

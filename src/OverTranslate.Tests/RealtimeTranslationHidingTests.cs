@@ -54,14 +54,4 @@ public class RealtimeTranslationHidingTests
 
         Assert.False(hiding.Hidden);
     }
-
-    // Hiding names nothing on the capsule — the held-down eye says it — so only the pause and the
-    // model load are left to choose between.
-    [Theory]
-    [InlineData(false, false, RealtimeRunStatus.Running)]
-    [InlineData(false, true, RealtimeRunStatus.LoadingModels)]
-    [InlineData(true, false, RealtimeRunStatus.Paused)]
-    [InlineData(true, true, RealtimeRunStatus.Paused)]
-    public void TheCapsuleNamesOneStatePausedFirst(bool paused, bool loading, RealtimeRunStatus expected) =>
-        Assert.Equal(expected, RealtimeRunStatusRule.For(paused, loading));
 }

@@ -105,14 +105,14 @@ public partial class RealtimeControlWindow : Window
     // The service the session translates with, as it last said through SetProvider.
     private Models.TranslationProvider _provider;
 
-    // The language list dropped from one of the two names, while it is open (#345).
-    private RealtimeLanguageMenu? _menu;
-    // Which list a press on the capsule just closed, so the click that press ends in does not open
-    // the same list again: pressing an open list's own name closes it, as a menu button does.
-    private RealtimeLanguageMenuKind? _menuClosedByPress;
+    // The translation panel — service, source and target — while it is open.
+    private RealtimeTranslationPanel? _panel;
+    // Whether a press on the capsule just closed the panel, so the click that press ends in does not
+    // open it again: pressing the button of an open panel closes it, as a menu button does.
+    private bool _panelClosedByPress;
     // 顯示外觀, while it is open (#355).
     private RealtimeAppearancePanel? _appearance;
-    // 模式, while it is open (翻譯中調整模式). Never open together with 顯示外觀 or a language list.
+    // 模式, while it is open (翻譯中調整模式). Never open together with 顯示外觀 or the translation panel.
     private RealtimeProfilePanel? _profiles;
     // 翻譯區域預設, while it is open over the framing bar. One panel at a time with 模式.
     private RealtimeFramingPanel? _framings;
@@ -145,10 +145,6 @@ public partial class RealtimeControlWindow : Window
     // out, and so clearing it never takes down a message that is not it.
     private readonly RealtimeFailureNotice _failure = new();
     private bool _failureShowing;
-
-    // Whether the press under way began on a message in the pair's place: released without a drag,
-    // it clicks the message away — see DismissMessage.
-    private bool _pressOnMessage;
 
     // The scale WPF renders this window at, which is the DPI of whatever monitor it currently sits
     // on — not necessarily the one the session runs on. Everything that converts between the window's
@@ -195,18 +191,18 @@ public partial class RealtimeControlWindow : Window
         Closed += (_, _) =>
         {
             _scaleFixupSettle.Stop();
-            CloseMenu("bar closed");
+            ClosePanel("bar closed");
             CloseAppearance();
             CloseProfiles();
             CloseFramings();
         };
 
-        // A list left open over a capsule that has gone away — a capture standing the session down —
-        // would be a menu for a bar that is not there. The same for 顯示外觀 and 翻譯區域預設.
+        // A panel left open over a capsule that has gone away — a capture standing the session down —
+        // would be a panel for a bar that is not there. The same for 顯示外觀 and 翻譯區域預設.
         IsVisibleChanged += (_, _) =>
         {
             if (IsVisible) return;
-            CloseMenu("bar hidden");
+            ClosePanel("bar hidden");
             CloseAppearance();
             CloseProfiles();
             CloseFramings();
@@ -218,13 +214,13 @@ public partial class RealtimeControlWindow : Window
         LocationChanged += (_, _) => FollowCapsule();
         SizeChanged += (_, _) => FollowCapsule();
 
-        // The capsule never activates, so pressing it does not take activation from an open list and
-        // the list would never hear about the press. It is told here instead: any press on the
-        // capsule is a press outside the list.
+        // The capsule never activates, so pressing it does not take activation from an open panel and
+        // the panel would never hear about the press. It is told here instead: any press on the
+        // capsule is a press outside the panel.
         PreviewMouseLeftButtonDown += (_, _) =>
         {
-            _menuClosedByPress = _menu?.Kind;
-            CloseMenu("press on the bar");
+            _panelClosedByPress = _panel is not null;
+            ClosePanel("press on the bar");
         };
 
         Loaded += (_, _) =>
@@ -281,8 +277,8 @@ public partial class RealtimeControlWindow : Window
     public event EventHandler<bool>? CollapsedChanged;
 
     /// <summary>
-    /// Raised with the pair the user picked from one of the two language lists — the half they did
-    /// not touch unchanged. The session decides what follows and reports the pair back through
+    /// Raised with the pair the user picked in the translation panel — the half they did not touch
+    /// unchanged. The session decides what follows and reports the pair back through
     /// <see cref="SetLanguages"/>.
     /// </summary>
     public event EventHandler<(string Source, string Target)>? LanguagesChangeRequested;
@@ -503,10 +499,13 @@ public partial class RealtimeControlWindow : Window
     /// setting that fails silently when it is wrong: recognition told to read the wrong script does
     /// not raise an error, it returns plausible nonsense, and this is where that is caught at a glance.
     /// </remarks>
-    /// <summary>Names the service the session translates with.</summary>
+    /// <summary>Names the service the session translates with: its mark on the translation button.</summary>
     public void SetProvider(Models.TranslationProvider provider)
     {
         _provider = Models.LanguageData.CurrentProvider(provider);
+        ProviderMarkView.Provider = _provider;
+        ApplySummary();
+        _panel?.ShowSelection(_provider, _sourceCode, _targetCode);
     }
 
     public void SetLanguages(string sourceCode, string targetCode)
@@ -516,8 +515,21 @@ public partial class RealtimeControlWindow : Window
         SourceLangText.Text = Models.LanguageData.GetSourceDisplayName(sourceCode);
         TargetLangText.Text = Models.LanguageData.GetTargetDisplayName(targetCode);
         _hasLanguages = SourceLangText.Text.Length > 0 && TargetLangText.Text.Length > 0;
+        ApplySummary();
+        _panel?.ShowSelection(_provider, _sourceCode, _targetCode);
 
         if (!_messageShowing) RestoreText();
+    }
+
+    // The service and the pair in a line: the button's name for a screen reader, and the collapsed
+    // capsule's tooltip. The label card works it out as it opens — see TranslationButtonTitle.
+    private string Summary() => RealtimeTranslationButtonRule.Summary(
+        Models.LanguageData.GetProviderDisplay(_provider), SourceLangText.Text, TargetLangText.Text);
+
+    private void ApplySummary()
+    {
+        System.Windows.Automation.AutomationProperties.SetName(TranslationBtn, Summary());
+        UpdateCollapsedToolTip();
     }
 
     /// <summary>
@@ -592,7 +604,7 @@ public partial class RealtimeControlWindow : Window
     public void SetMode(RealtimeControlMode mode)
     {
         _mode = mode;
-        CloseMenu($"mode {mode}");
+        ClosePanel($"mode {mode}");
         CloseAppearance();
         CloseProfiles();
         CloseFramings();
@@ -669,7 +681,7 @@ public partial class RealtimeControlWindow : Window
     /// way. What stays is chosen so collapsed is a state the user can live in rather than pass
     /// through: the dot still pulses and still turns red on a failure, which is the one thing worth
     /// noticing from across the screen, and ✕ is there so ending the session does not mean opening
-    /// it first. Everything else — the pair, 截圖翻譯, 暫停, 編輯 — is one press away. 暫停 is
+    /// it first. Everything else — the translation button, 截圖翻譯, 暫停, 編輯 — is one press away. 暫停 is
     /// left out on purpose: it has its own shortcut, and a fourth button would undo most of what
     /// collapsing saves.</para>
     ///
@@ -700,6 +712,7 @@ public partial class RealtimeControlWindow : Window
     private void ApplyCollapsed()
     {
         RunDetails.Visibility = _collapsed ? Visibility.Collapsed : Visibility.Visible;
+        CollapsedDot.Visibility = _collapsed ? Visibility.Visible : Visibility.Collapsed;
 
         // › to fold towards the right edge, ‹ to grow back out to the left.
         CollapseGlyph.Data = _collapsed ? ExpandChevron : CollapseChevron;
@@ -708,11 +721,11 @@ public partial class RealtimeControlWindow : Window
         System.Windows.Automation.AutomationProperties.SetName(CollapseBtn, label);
 
         UpdateCollapsedToolTip();
-        CloseMenuIfPairHidden();
 
         // Its button has gone with the rest of the capsule.
         if (_collapsed)
         {
+            ClosePanel("bar collapsed");
             CloseAppearance();
             CloseProfiles();
             CloseFramings();
@@ -732,10 +745,10 @@ public partial class RealtimeControlWindow : Window
             return;
         }
 
-        var pair = $"{SourceLangText.Text} → {TargetLangText.Text}";
-        RunPanel.ToolTip = LangPairPanel.Visibility != Visibility.Visible
-            ? RunStatusText.Text
-            : RunStatusText.Visibility == Visibility.Visible ? $"{RunStatusText.Text} · {pair}" : pair;
+        var status = RunStatusText.Visibility == Visibility.Visible ? RunStatusText.Text
+            : _isPaused ? PausedStatus
+            : null;
+        RunPanel.ToolTip = status is null ? Summary() : $"{status} · {Summary()}";
     }
 
     // Spaced either side of the slash: at 12px the bare 1/1 reads as one glyph cluster rather than
@@ -756,22 +769,26 @@ public partial class RealtimeControlWindow : Window
     {
         // A pass cancelled by 暫停 can report itself busy on its way out; the dot is saying
         // something else now.
-        if ((_busy || _isLoadingModels) && !_isPaused)
+        var pulsing = (_busy || _isLoadingModels) && !_isPaused;
+        foreach (var dot in new UIElement[] { StatusDot, CollapsedDot })
         {
-            StatusDot.BeginAnimation(OpacityProperty, new DoubleAnimation
+            if (pulsing)
             {
-                From = 1,
-                To = 0.3,
-                Duration = new Duration(TimeSpan.FromMilliseconds(620)),
-                AutoReverse = true,
-                RepeatBehavior = RepeatBehavior.Forever,
-                EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
-            });
-            return;
-        }
+                dot.BeginAnimation(OpacityProperty, new DoubleAnimation
+                {
+                    From = 1,
+                    To = 0.3,
+                    Duration = new Duration(TimeSpan.FromMilliseconds(620)),
+                    AutoReverse = true,
+                    RepeatBehavior = RepeatBehavior.Forever,
+                    EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+                });
+                continue;
+            }
 
-        StatusDot.BeginAnimation(OpacityProperty, null);
-        StatusDot.Opacity = 1;
+            dot.BeginAnimation(OpacityProperty, null);
+            dot.Opacity = 1;
+        }
     }
 
     /// <summary>
@@ -795,20 +812,15 @@ public partial class RealtimeControlWindow : Window
         }
         else
         {
-            // A message is a sentence, not a pair, so it takes the whole slot back for its duration.
-            LangPairPanel.Visibility = Visibility.Collapsed;
-            RunStatusText.Visibility = Visibility.Visible;
-            RunStatusText.Text = message;
+            // A message is a sentence, not a pair, so it takes the pair's place in the button for its
+            // duration; the dot and the service's mark stay where they are.
+            ApplyRunBody(message);
 
             // Same frame as the text it belongs to. The dot is the one thing on this bar visible at
             // a glance from across a full-screen window, so a failure is worth spending its colour
             // on; it goes back to accent when the message does.
             SetDotState(kind == RealtimeMessageKind.Failure);
             UpdateCollapsedToolTip();
-            CloseMenuIfPairHidden();
-
-            RunStatusText.Cursor = System.Windows.Input.Cursors.Hand;
-            RunStatusText.SetResourceReference(ToolTipProperty, "S.Realtime.DismissMessage");
         }
 
         _messageShowing = true;
@@ -829,8 +841,7 @@ public partial class RealtimeControlWindow : Window
         if (_mode != RealtimeControlMode.Running || _isPaused) return;
 
         if (message is not null) ShowFailure();
-        // A transient message showing puts the bar back itself when it times out; otherwise the bar
-        // may be the pair under a dot still red for a failure that was clicked away.
+        // A transient message showing puts the bar back itself when it times out.
         else if (_failureShowing || !_messageShowing) RestoreText();
     }
 
@@ -850,13 +861,13 @@ public partial class RealtimeControlWindow : Window
         Topmost = false;
         Topmost = true;
         if (_appearance is { } panel) AlwaysOnTop.Reassert(panel);
+        if (_panel is { } translation) AlwaysOnTop.Reassert(translation);
     }
 
     private void RestoreText()
     {
         // The bar's own text, unless a failure is still being retried: then that is its own text.
-        var failing = _failure.Message is not null && _mode == RealtimeControlMode.Running && !_isPaused;
-        if (failing && _failure.StandsInForPair)
+        if (_failure.Message is not null && _mode == RealtimeControlMode.Running && !_isPaused)
         {
             ShowFailure();
             return;
@@ -866,50 +877,57 @@ public partial class RealtimeControlWindow : Window
         _failureShowing = false;
         EditHintText.Text = _crosshairEnabled ? EditHint : CrosshairOffHint;
 
-        var status = RealtimeRunStatusRule.For(_isPaused, _isLoadingModels);
-        RunStatusText.Text = status switch
-        {
-            RealtimeRunStatus.Paused => PausedStatus,
-            RealtimeRunStatus.LoadingModels => LoadingModelsStatus,
-            _ => RunStatus,
-        };
-
-        // Paused, the pair stays beside 已暫停 rather than giving way to it: the pair is the one place
-        // the languages can be changed from (#345), and a paused session is where someone who noticed
-        // the wrong one is most likely to stop and fix it before carrying on.
-        var showPair = _hasLanguages && !_isLoadingModels;
-        LangPairPanel.Visibility = showPair ? Visibility.Visible : Visibility.Collapsed;
-        RunStatusText.Visibility = showPair && status != RealtimeRunStatus.Paused ? Visibility.Collapsed : Visibility.Visible;
-
-        // Red still, for a failure that was clicked away: it is set aside, not over.
-        SetDotState(failed: failing);
+        ApplyRunBody(null);
+        SetDotState(failed: false);
         UpdateCollapsedToolTip();
-        CloseMenuIfPairHidden();
-
-        RunStatusText.Cursor = null;
-        RunStatusText.ClearValue(ToolTipProperty);
     }
 
     /// <summary>
-    /// The tooltip of the bar's message slot, decided as it opens: the whole sentence when the slot
-    /// had to cut it, and on the capsule the click-to-dismiss hint under it while a message is up.
-    /// Nothing at all for the bar's own sentence shown in full.
+    /// Puts what the session has to say after the button's dot and mark — see
+    /// <see cref="RealtimeTranslationButtonRule.For"/> — and 已暫停 beside the button while paused.
+    /// </summary>
+    private void ApplyRunBody(string? message)
+    {
+        var body = RealtimeTranslationButtonRule.For(_isPaused, _isLoadingModels, message is not null, _hasLanguages);
+
+        RunStatusText.Text = body switch
+        {
+            RealtimeButtonBody.Message => message,
+            RealtimeButtonBody.LoadingModels => LoadingModelsStatus,
+            _ => RunStatus,
+        };
+        // 載入模型中… is a state, not news, and steps back like the source language does.
+        RunStatusText.SetResourceReference(
+            System.Windows.Controls.TextBlock.ForegroundProperty,
+            body == RealtimeButtonBody.LoadingModels ? "AppTextSecondary" : "AppTextPrimary");
+
+        PairText.Visibility = body == RealtimeButtonBody.Pair ? Visibility.Visible : Visibility.Collapsed;
+        RunStatusText.Visibility = body == RealtimeButtonBody.Pair ? Visibility.Collapsed : Visibility.Visible;
+        PausedText.Visibility = _isPaused ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// The translation button's label card: the whole message when the button cut it, otherwise the
+    /// service and the pair — see <see cref="RealtimeTranslationButtonRule.Title"/>.
+    /// </summary>
+    private string TranslationButtonTitle() => RealtimeTranslationButtonRule.Title(
+        RunStatusText.Visibility == Visibility.Visible && IsCut(RunStatusText) ? RunStatusText.Text : null,
+        Models.LanguageData.GetProviderDisplay(_provider), SourceLangText.Text, TargetLangText.Text);
+
+    /// <summary>
+    /// The tooltip of the framing bar's message slot, decided as it opens: the whole sentence when the
+    /// slot had to cut it, and nothing at all for a sentence shown in full.
     /// </summary>
     private void MessageText_ToolTipOpening(object sender, System.Windows.Controls.ToolTipEventArgs e)
     {
         var text = (System.Windows.Controls.TextBlock)sender;
-        var full = IsCut(text) ? text.Text : null;
-        var dismiss = ReferenceEquals(text, RunStatusText) && _messageShowing
-            ? LocalizationService.Get("S.Realtime.DismissMessage")
-            : null;
-
-        if (full is null && dismiss is null)
+        if (!IsCut(text))
         {
             e.Handled = true;
             return;
         }
 
-        text.ToolTip = full is not null && dismiss is not null ? $"{full}\n{dismiss}" : full ?? dismiss;
+        text.ToolTip = text.Text;
     }
 
     /// <summary>Whether <paramref name="text"/> is showing less than its whole text — cut with … at its width.</summary>
@@ -928,67 +946,49 @@ public partial class RealtimeControlWindow : Window
         return formatted.WidthIncludingTrailingWhitespace > text.ActualWidth + 0.5;
     }
 
-    /// <summary>
-    /// Takes a message off the pair's place on a click. The one that matters is the failure being
-    /// retried, which otherwise stays until it clears — and when it is a service refusing the
-    /// language pair, it never does, while covering the pair the user would change to fix it.
-    /// </summary>
-    private void DismissMessage()
+    // ── Translation panel ────────────────────────────────────────────────────────────────────────
+
+    private void TranslationBtn_Click(object sender, RoutedEventArgs e)
     {
-        if (!_messageShowing) return;
-        if (_failureShowing) _failure.Dismiss();
-        _messageTimer.Stop();
-        RestoreText();
-    }
-
-    // ── Language lists (#345) ────────────────────────────────────────────────────────────────────
-
-    private void SourceLangBtn_Click(object sender, RoutedEventArgs e) =>
-        ToggleMenu(RealtimeLanguageMenuKind.Source, SourceLangBtn);
-
-    private void TargetLangBtn_Click(object sender, RoutedEventArgs e) =>
-        ToggleMenu(RealtimeLanguageMenuKind.Target, TargetLangBtn);
-
-    private void ToggleMenu(RealtimeLanguageMenuKind kind, System.Windows.Controls.Button button)
-    {
-        // The press that started this click has already closed whatever list was open; when it was
-        // this one, closing it was the whole answer.
-        var closedByPress = _menuClosedByPress;
-        _menuClosedByPress = null;
-        if (closedByPress == kind)
+        // The press that started this click has already closed the panel if it was open; when it
+        // was, closing it was the whole answer.
+        var closedByPress = _panelClosedByPress;
+        _panelClosedByPress = false;
+        if (closedByPress)
         {
-            Log.Info("Realtime language list {Kind}: button pressed, the press closed this list so it stays closed", kind);
+            Log.Info("Realtime translation panel: button pressed, the press closed the panel so it stays closed");
             return;
         }
 
         Log.Info(
-            "Realtime language list {Kind}: button pressed, mode={Mode} paused={Paused} collapsed={Collapsed} pairVisible={PairVisible} open={Open}",
-            kind, _mode, _isPaused, _collapsed, LangPairPanel.Visibility == Visibility.Visible, _menu?.Kind);
+            "Realtime translation panel: button pressed, mode={Mode} paused={Paused} loading={Loading} failing={Failing}",
+            _mode, _isPaused, _isLoadingModels, _failure.Message is not null);
 
-        CloseMenu("another list opening");
-        // One thing open over the capsule at a time: the two would open into the same space.
+        // One thing open over the capsule at a time: they would open into the same space.
         CloseAppearance();
         CloseProfiles();
         CloseFramings();
 
-        var menu = new RealtimeLanguageMenu(
-            kind,
-            kind == RealtimeLanguageMenuKind.Source ? _sourceCode : _targetCode,
-            PhysicalRect(button),
-            PhysicalRect(Chrome),
-            _screenBounds);
-        menu.LanguagePicked += (_, code) => OnLanguagePicked(kind, code);
-        menu.PackDownloadRequested += (_, code) => WatchPackDownload(code);
-        menu.Closed += (_, _) =>
+        var panel = new RealtimeTranslationPanel(_provider, _sourceCode, _targetCode, PhysicalRect(Chrome), _screenBounds);
+        panel.ProviderPicked += (_, provider) => OnProviderPicked(provider);
+        panel.LanguagePicked += (_, pick) => OnLanguagePicked(pick.Kind, pick.Code);
+        panel.PackDownloadRequested += (_, code) => WatchPackDownload(code);
+        panel.Closed += (_, _) =>
         {
-            if (!ReferenceEquals(_menu, menu)) return;
-            _menu = null;
-            button.Tag = null;
+            if (!ReferenceEquals(_panel, panel)) return;
+            _panel = null;
+            TranslationBtn.Tag = null;
         };
 
-        _menu = menu;
-        button.Tag = "Open";
-        menu.Show();
+        _panel = panel;
+        TranslationBtn.Tag = "Open";
+        panel.Show();
+    }
+
+    private void OnProviderPicked(Models.TranslationProvider provider)
+    {
+        if (!RealtimeProviderSwitch.IsChange(_provider, provider)) return;
+        ProviderChangeRequested?.Invoke(this, provider);
     }
 
     // The source language being downloaded at the user's request from this capsule, which goes into
@@ -1019,7 +1019,7 @@ public partial class RealtimeControlWindow : Window
         if (pack.IsReady)
         {
             StopWatchingPackDownload();
-            OnLanguagePicked(RealtimeLanguageMenuKind.Source, code);
+            OnLanguagePicked(RealtimeLanguageKind.Source, code);
         }
         else if (!pack.IsDownloading)
         {
@@ -1028,38 +1028,29 @@ public partial class RealtimeControlWindow : Window
         }
     }
 
-    private void OnLanguagePicked(RealtimeLanguageMenuKind kind, string code)
+    private void OnLanguagePicked(RealtimeLanguageKind kind, string code)
     {
-        if (kind == RealtimeLanguageMenuKind.Source && _pendingPackCode != code)
+        if (kind == RealtimeLanguageKind.Source && _pendingPackCode != code)
             StopWatchingPackDownload();
 
-        var source = kind == RealtimeLanguageMenuKind.Source ? code : _sourceCode;
-        var target = kind == RealtimeLanguageMenuKind.Target ? code : _targetCode;
+        var source = kind == RealtimeLanguageKind.Source ? code : _sourceCode;
+        var target = kind == RealtimeLanguageKind.Target ? code : _targetCode;
 
-        // Picking the language already in use is a list closed, not a change.
+        // Picking the language already in use is not a change.
         if (string.Equals(source, _sourceCode, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(target, _targetCode, StringComparison.OrdinalIgnoreCase)) return;
 
         LanguagesChangeRequested?.Invoke(this, (source, target));
     }
 
-    // A list belongs to the name it dropped from; once that name is off the capsule — a message in
-    // its place, 載入模型中…, the capsule collapsed — the list is pointing at nothing.
-    private void CloseMenuIfPairHidden()
-    {
-        if (_menu is not null && (LangPairPanel.Visibility != Visibility.Visible || _collapsed))
-            CloseMenu(_collapsed ? "bar collapsed" : "pair hidden");
-    }
-
     /// <param name="reason">What closed it, for the log (#358).</param>
-    private void CloseMenu(string reason)
+    private void ClosePanel(string reason)
     {
-        var menu = _menu;
-        if (menu is null) return;
-        _menu = null;
-        SourceLangBtn.Tag = null;
-        TargetLangBtn.Tag = null;
-        menu.Dismiss(giveBackForeground: true, reason);
+        var panel = _panel;
+        if (panel is null) return;
+        _panel = null;
+        TranslationBtn.Tag = null;
+        panel.Dismiss(giveBackForeground: true, reason);
     }
 
     // ── 顯示外觀 (#355) ─────────────────────────────────────────────────────────────────────────
@@ -1074,7 +1065,7 @@ public partial class RealtimeControlWindow : Window
             return;
         }
 
-        CloseMenu("appearance panel opening");
+        ClosePanel("appearance panel opening");
         CloseProfiles();
         CloseFramings();
 
@@ -1107,6 +1098,7 @@ public partial class RealtimeControlWindow : Window
         if (_appearance is { } panel) panel.UpdateAnchor(PhysicalRect(Chrome));
         if (_profiles is { } profiles) profiles.UpdateAnchor(PhysicalRect(Chrome));
         if (_framings is { } framings) framings.UpdateAnchor(PhysicalRect(Chrome));
+        if (_panel is { } translation) translation.UpdateAnchor(PhysicalRect(Chrome));
     }
 
     // ── 翻譯區域預設 ────────────────────────────────────────────────────────────────────────────
@@ -1141,7 +1133,7 @@ public partial class RealtimeControlWindow : Window
         // user, and its button is on the framing bar only.
         if (_mode != RealtimeControlMode.Edit) return;
 
-        CloseMenu("framing list opening");
+        ClosePanel("framing list opening");
         CloseAppearance();
         CloseProfiles();
 
@@ -1263,7 +1255,7 @@ public partial class RealtimeControlWindow : Window
     private void ProfilesBtn_Click(object sender, RoutedEventArgs e)
     {
         // Human-paced, and the first thing to look at if the panel is reported as not opening, as the
-        // language lists log theirs (#358).
+        // translation panel logs its own (#358).
         Log.Info("Realtime mode panel button pressed, mode={Mode} open={Open}", _mode, _profiles is not null);
 
         // Pressing it again is how the panel is put away, as 顯示外觀's is: it stays open otherwise,
@@ -1301,7 +1293,7 @@ public partial class RealtimeControlWindow : Window
         }
 
         // One thing open over the capsule at a time: they open into the same space.
-        CloseMenu("mode panel opening");
+        ClosePanel("mode panel opening");
         CloseAppearance();
         CloseFramings();
 
@@ -1422,12 +1414,14 @@ public partial class RealtimeControlWindow : Window
     // Paused is the secondary text brush rather than a colour of its own: this bar has no amber, and
     // inventing one for a state the user asked for would read as a warning. Grey is the absence of
     // the accent — which is exactly what a paused session is — and it stays legible in both themes.
-    private void SetDotState(bool failed) =>
-        StatusDot.SetResourceReference(
-            System.Windows.Shapes.Shape.FillProperty,
-            failed
-                ? "AppError"
-                : _isPaused ? "AppTextSecondary" : "AppAccent");
+    private void SetDotState(bool failed)
+    {
+        var brush = failed
+            ? "AppError"
+            : _isPaused ? "AppTextSecondary" : "AppAccent";
+        StatusDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, brush);
+        CollapsedDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, brush);
+    }
 
     private void ApplyPauseButton()
     {
@@ -1511,9 +1505,6 @@ public partial class RealtimeControlWindow : Window
     // own position in screen pixels, and mixing in a DIP delta would drift on a scaled display.
     private void Chrome_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        _pressOnMessage = _messageShowing && _mode == RealtimeControlMode.Running
-            && ReferenceEquals(e.OriginalSource, RunStatusText);
-
         // A press on the bar itself, not one of its buttons, is a press outside 顯示外觀, as it is
         // for the lists: put away rather than dragged along, where the bar could end up under it.
         CloseAppearance();
@@ -1541,13 +1532,6 @@ public partial class RealtimeControlWindow : Window
         if (!_isDragging) return;
         _isDragging = false;
         ((UIElement)sender).ReleaseMouseCapture();
-
-        // A press that went nowhere was a click; one that moved the bar was a drag, whatever it began on.
-        var mouse = System.Windows.Forms.Control.MousePosition;
-        var slop = SystemParameters.MinimumHorizontalDragDistance * _windowScale;
-        var clicked = Math.Abs(mouse.X - _dragStartMouse.X) <= slop && Math.Abs(mouse.Y - _dragStartMouse.Y) <= slop;
-        if (_pressOnMessage && clicked) DismissMessage();
-        _pressOnMessage = false;
     }
 
     private void StartBtn_Click(object sender, RoutedEventArgs e) => StartRequested?.Invoke(this, EventArgs.Empty);

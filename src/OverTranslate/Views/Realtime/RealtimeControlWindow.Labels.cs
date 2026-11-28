@@ -13,8 +13,8 @@ namespace OverTranslate.Views.Realtime;
 /// half, which is where it starts, and under it once it has been dragged up into the upper half.
 /// There is no selection here to keep clear of, and the middle is where there is room.</para>
 ///
-/// <para>The status text and the dot are left to the capsule's own tooltip: they are not buttons,
-/// and what a collapsed capsule shows there is the words it has no room for, not a name.</para>
+/// <para>The collapsed capsule's dot is left to the capsule's own tooltip: it is not a button, and
+/// what a collapsed capsule shows there is the words it has no room for, not a name.</para>
 /// </remarks>
 public partial class RealtimeControlWindow
 {
@@ -41,8 +41,8 @@ public partial class RealtimeControlWindow
         Labels.Add(EditCloseBtn, () => LocalizationService.Get("S.Realtime.StopSession"));
 
         // Running.
-        Labels.Add(SourceLangBtn, () => LocalizationService.Get("S.Realtime.ChangeSourceLanguage"));
-        Labels.Add(TargetLangBtn, () => LocalizationService.Get("S.Realtime.ChangeTargetLanguage"));
+        // The service and the pair, or the whole message when the button had to cut it.
+        Labels.Add(TranslationBtn, TranslationButtonTitle, () => null);
         Labels.Add(CaptureBtn, () => LocalizationService.Get("S.Shell.CaptureTranslate"));
         Labels.Add(HideBtn,
             () => LocalizationService.Get(

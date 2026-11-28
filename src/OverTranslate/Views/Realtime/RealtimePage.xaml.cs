@@ -302,8 +302,8 @@ public partial class RealtimePage : UserControl
         var target   = TgtLangBox.SelectedValue;
         var provider = ProviderBox.SelectedValue;
 
-        // The same list the running capsule's source menu offers — see RealtimeLanguageMenuItems.
-        LocalizationService.BindLocalizedItems(SrcLangBox, RealtimeLanguageMenuItems.SourceLanguages.ToList());
+        // The same list the running capsule's translation panel offers — see RealtimeTranslationPanelItems.
+        LocalizationService.BindLocalizedItems(SrcLangBox, RealtimeTranslationPanelItems.SourceLanguages.ToList());
         LocalizationService.BindLocalizedItems(TgtLangBox,  LanguageData.TargetLanguages);
         // Also where a change to which services are offered lands, on the way back from the settings
         // page. A running session has this box locked, and keeps its own choice in the list anyway.

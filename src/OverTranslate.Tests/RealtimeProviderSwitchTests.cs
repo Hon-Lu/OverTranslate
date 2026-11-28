@@ -48,6 +48,57 @@ public class RealtimeProviderSwitchTests
     public void OnlyAnotherService_IsAChange(TranslationProvider current, TranslationProvider picked, bool change) =>
         Assert.Equal(change, RealtimeProviderSwitch.IsChange(current, picked));
 
+    // ── The service column ───────────────────────────────────────────────────
+
+    [Fact]
+    public void ServiceColumn_ListsEveryService_InTheMenusOrder_WhenNoneIsHidden()
+    {
+        var entries = RealtimeTranslationPanelItems.Providers([], TranslationProvider.Bing);
+
+        Assert.Equal(LanguageData.Providers.Select(p => p.Provider), entries.Select(e => e.Provider));
+        Assert.Equal([TranslationProvider.Bing], entries.Where(e => e.IsSelected).Select(e => e.Provider));
+    }
+
+    [Fact]
+    public void ServiceColumn_LeavesOutWhatTheSettingsPageHides()
+    {
+        var entries = RealtimeTranslationPanelItems.Providers(["Yandex", "DeepL"], TranslationProvider.Google);
+
+        Assert.DoesNotContain(entries, e => e.Provider is TranslationProvider.Yandex or TranslationProvider.DeepL);
+    }
+
+    // Hiding the service in use neither changes what translates nor drops it from the column.
+    [Fact]
+    public void ServiceColumn_KeepsTheServiceInUse_EvenWhenHidden()
+    {
+        var entries = RealtimeTranslationPanelItems.Providers(["Yandex"], TranslationProvider.Yandex);
+
+        Assert.Contains(entries, e => e.Provider == TranslationProvider.Yandex && e.IsSelected);
+    }
+
+    // Once the session has moved off a hidden service, it cannot be picked again.
+    [Fact]
+    public void AHiddenServiceTheSessionLeft_IsNotOfferedAgain()
+    {
+        var entries = RealtimeTranslationPanelItems.Providers(["Yandex"], TranslationProvider.Google);
+
+        Assert.DoesNotContain(entries, e => e.Provider == TranslationProvider.Yandex);
+    }
+
+    [Fact]
+    public void ServiceColumn_MarksTheRetiredGoogleAsStandard()
+    {
+        var entries = RealtimeTranslationPanelItems.Providers([], TranslationProvider.Google2);
+
+        Assert.Equal([TranslationProvider.Google], entries.Where(e => e.IsSelected).Select(e => e.Provider));
+    }
+
+    // The column names the service only; a local model's name is the settings page's to say.
+    [Fact]
+    public void ServiceColumn_NamesTheServiceOnly() =>
+        Assert.All(RealtimeTranslationPanelItems.Providers([], TranslationProvider.LocalAI),
+            e => Assert.Equal(e.Item.Display, e.Label));
+
     // ── The session ──────────────────────────────────────────────────────────
 
     private static readonly RealtimeRegion Block =
