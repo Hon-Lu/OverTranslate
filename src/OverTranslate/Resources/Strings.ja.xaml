@@ -199,6 +199,8 @@
     <sys:String x:Key="S.Toolbar.Translating">翻訳中...</sys:String>
     <sys:String x:Key="S.Toolbar.Recognising">認識中...</sys:String>
     <sys:String x:Key="S.Toolbar.Retranslate">もう一度翻訳</sys:String>
+    <sys:String x:Key="S.Toolbar.EditSelection">選択範囲を編集</sys:String>
+    <sys:String x:Key="S.Toolbar.EditSelectionHint">選択画面に戻って修正</sys:String>
     <sys:String x:Key="S.Toolbar.ShowSource">原文を表示</sys:String>
     <sys:String x:Key="S.Toolbar.ShowTranslation">訳文を表示</sys:String>
     <sys:String x:Key="S.Toolbar.CopyText">テキストをコピー</sys:String>

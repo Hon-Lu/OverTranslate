@@ -99,6 +99,14 @@ public partial class MainWindow : Window
     // A translation of this capture is on its way: the switch waits for it — see ApplyCaptureFilter.
     private bool _captureTranslating;
 
+    // What the translation on screen was made with that the fields above do not say: the service,
+    // and whether a backup engine answered. Both are part of what 編輯框選範圍 puts back.
+    private Models.TranslationProvider _lastProvider;
+    private Services.Providers.EngineUsage? _lastEngineUsage;
+
+    // The translation 編輯框選範圍 took off the screen, for 翻譯 to put back when nothing changed.
+    private readonly CaptureReframe _reframe = new();
+
     public MainWindow()
     {
         InitializeComponent();
@@ -895,6 +903,8 @@ public partial class MainWindow : Window
         _captureFilterShapes = null;
         _captureFilterRequest = null;
         _captureTranslating = false;
+        _lastEngineUsage = null;
+        _reframe.Clear();
         _lastSelPhysLeft   = selection.Left;
         _lastSelPhysTop    = selection.Top;
         _lastSelPhysWidth  = selection.Width;
@@ -933,6 +943,7 @@ public partial class MainWindow : Window
         toolbar.SpeakToggleRequested    += OnSpeakToggleRequested;
         toolbar.SpeakStopRequested      += (_, _) => _tts.Stop();
         toolbar.AnnotateModeChanged     += OnAnnotateModeChanged;
+        toolbar.EditSelectionRequested  += OnEditSelectionRequested;
         _toolbarWindow = toolbar;
         toolbar.SetTranslationState(hasTranslated);
         toolbar.SetToggleEnabled(blocks.Count > 0);
@@ -1029,6 +1040,19 @@ public partial class MainWindow : Window
         var settings = SettingsService.Instance.Current;
         var selRect  = requestCaptureWindow?.Selection
             ?? new System.Windows.Rect(_lastSelPhysLeft, _lastSelPhysTop, _lastSelPhysWidth, _lastSelPhysHeight);
+        var provider = settings.Provider;
+
+        // 翻譯 after 編輯框選範圍 with nothing changed: the translation taken off the screen goes
+        // straight back up — nothing read, nothing asked, no 翻譯中. Anything changed, and the held
+        // one is dropped here and this goes on as an ordinary translation.
+        if (requestCaptureWindow != null && _reframe.IsHolding &&
+            _reframe.Take(new CaptureReframe.Inputs(
+                requestCaptureWindow.Selection, req.SourceLang, req.TargetLang, req.IsVerticalText, provider)) is { } held &&
+            requestCaptureWindow.PrepareForProcessing(out _))
+        {
+            RestoreCaptureResult(held, requestCaptureWindow, requestToolbar);
+            return;
+        }
 
         if (AppServices.Translation.RequiresApiKey && string.IsNullOrWhiteSpace(settings.ApiKey))
         {
@@ -1047,10 +1071,13 @@ public partial class MainWindow : Window
         var started = Stopwatch.GetTimestamp();
         long ocrMs = 0, translateMs = 0, backdropMs = 0;
 
-        // Whether the frame may still be handed back: this run is what locked it, and recognition —
-        // the one stage a redrawn box would fix — has not got past finding text yet. Cleared the
-        // moment there is text to translate, because from there the box is settled for good: the
-        // bubbles are laid out against it, so it must not move under them even if the engine fails.
+        // Whether the frame is handed straight back if this run ends without a translation: this run
+        // is what locked it, and recognition — the one stage a redrawn box would fix — has not got
+        // past finding text yet. Cleared the moment there is text to translate. From there the box
+        // stays locked under the bubbles laid out against it, and the screen stays clean of the
+        // frame and handles: people compare the translated capture against the original with other
+        // screenshot tools. The way back to the box is the user's to take, through 編輯框選範圍 on
+        // the toolbar — see OnEditSelectionRequested.
         bool frameStillRestorable = false;
 
         try
@@ -1101,6 +1128,7 @@ public partial class MainWindow : Window
                 return;
             }
 
+            // Locked from here until the user asks for the box back; see above.
             frameStillRestorable = false;
 
             _overlayWindow?.ShowProcessing(
@@ -1234,11 +1262,13 @@ public partial class MainWindow : Window
             _captureFilter = final is null ? null : filtered;
             _captureFilterShapes = bubbles;
             _captureFilterRequest = req;
+            _lastProvider = provider;
             ShowFilteredGroups();
             requestToolbar?.SetTranslationState(true);
             requestToolbar?.SetToggleEnabled(coloredTranslated.Count > 0);
             // Nothing was asked of any engine when every group was left out.
-            requestToolbar?.SetEngineBadge(translated.Asked.Count > 0 ? AppServices.Translation.LastEngineUsage : null);
+            _lastEngineUsage = translated.Asked.Count > 0 ? AppServices.Translation.LastEngineUsage : null;
+            requestToolbar?.SetEngineBadge(_lastEngineUsage);
 
             // Sizes and times only, never the text: this is Info, in every diagnostic bundle.
             // The backdrop runs alongside the translation, so the two times overlap.
@@ -1365,7 +1395,8 @@ public partial class MainWindow : Window
                 return;
             }
 
-            toolbar?.SetEngineBadge(AppServices.Translation.LastEngineUsage);
+            _lastEngineUsage = AppServices.Translation.LastEngineUsage;
+            toolbar?.SetEngineBadge(_lastEngineUsage);
             ShowCaptureFilter(state, shapes);
             Log.Info("Capture filter off: {Asked} groups translated", translated.Asked.Count);
         }
@@ -1383,6 +1414,96 @@ public partial class MainWindow : Window
             if (IsCurrentSelectionSession(sessionId, toolbar, captureWindow))
                 toolbar?.SetBusy(false);
         }
+    }
+
+    /// <summary>
+    /// 編輯框選範圍: the translated capture goes back to how it was before translating — frame,
+    /// handles and move area up, the bubbles off so the original shows, the toolbar back to 翻譯 —
+    /// with the translation held aside in case the box is not changed after all.
+    /// </summary>
+    /// <remarks>
+    /// <para>Everything that reads the translation is cleared, not only the bubbles: copy, speak, the
+    /// 過濾數字與縮寫 switch and the backup badge would otherwise go on answering for a box the user
+    /// is in the middle of changing. 標記 is put away first, because it holds the handles back for as
+    /// long as it is on, and the handles are what this is for.</para>
+    ///
+    /// <para>Translating again is left to the 翻譯 button whatever 框選後自動翻譯 says: that switch
+    /// is about the first box of a capture, and adjusting one takes more than one drag.</para>
+    /// </remarks>
+    private void OnEditSelectionRequested(object? sender, EventArgs e)
+    {
+        if (_captureTranslating || _captureWindow is not { } captureWindow || _toolbarWindow is not { } toolbar)
+            return;
+        if (_lastColoredBlocks.Count == 0 || _captureFilterRequest is not { } req)
+            return;
+
+        CloseAnnotationPanel();
+        _tts.Stop();
+
+        _reframe.Hold(
+            new CaptureReframe.Inputs(captureWindow.Selection, req.SourceLang, req.TargetLang, req.IsVerticalText, _lastProvider),
+            TakeCaptureResult(req.SourceLang));
+        PutCaptureResult(CaptureResult.Empty(_lastTargetLang));
+
+        // The toggle first: it puts the bubbles back on as it resets, and the overlay clears them after.
+        toolbar.SetToggleEnabled(false);
+        toolbar.SetTranslationState(false);
+        toolbar.SetSpeakableText(false);
+        toolbar.SetEngineBadge(null);
+        _overlayWindow?.UpdateBlocks(
+            [], [], _lastSelPhysLeft, _lastSelPhysTop, _lastSelPhysWidth, _lastSelPhysHeight,
+            req.SourceLang, _lastTargetLang, _lastVerticalText);
+        ShowFilteredGroups();
+
+        captureWindow.RestoreSelectionEditing();
+        Log.Info("Capture selection handed back for editing after translation");
+    }
+
+    /// <summary>
+    /// Puts back the translation <see cref="OnEditSelectionRequested"/> held aside, the box having
+    /// come back unchanged: the same bubbles, backdrop, filter, badge, and copy and speak text.
+    /// </summary>
+    private void RestoreCaptureResult(CaptureResult held, ScreenCaptureWindow captureWindow, ToolbarWindow? toolbar)
+    {
+        PutCaptureResult(held);
+        _lastSelPhysLeft   = captureWindow.Selection.Left;
+        _lastSelPhysTop    = captureWindow.Selection.Top;
+        _lastSelPhysWidth  = captureWindow.Selection.Width;
+        _lastSelPhysHeight = captureWindow.Selection.Height;
+
+        _overlayWindow?.UpdateBlocks(
+            held.ColoredBlocks, held.OcrBlocks, _lastSelPhysLeft, _lastSelPhysTop, _lastSelPhysWidth, _lastSelPhysHeight,
+            held.SourceLang, held.TargetLang, held.VerticalText, held.Backdrop);
+        ShowFilteredGroups();
+
+        toolbar?.SetTranslationState(true);
+        toolbar?.SetToggleEnabled(held.HasTranslation);
+        toolbar?.SetEngineBadge(held.EngineUsage);
+        toolbar?.SetSpeakableText(held.HasTranslation && SourceTextForSpeech().Length > 0);
+
+        Log.Info("Capture selection unchanged: previous translation restored without recognising or translating");
+
+        // The switch may have been turned while the box was being edited.
+        ApplyCaptureFilter();
+    }
+
+    /// <summary>The translation on screen, as one value; see <see cref="CaptureResult"/>.</summary>
+    private CaptureResult TakeCaptureResult(string sourceLang) => new(
+        _lastOcrBlocks, _lastTranslatedBlocks, _lastColoredBlocks, _lastBackdrop, _lastVerticalText,
+        sourceLang, _lastTargetLang, _captureFilter, _captureFilterShapes, _captureFilterRequest, _lastEngineUsage);
+
+    private void PutCaptureResult(CaptureResult result)
+    {
+        _lastOcrBlocks        = result.OcrBlocks;
+        _lastTranslatedBlocks = result.TranslatedBlocks;
+        _lastColoredBlocks    = result.ColoredBlocks;
+        _lastBackdrop         = result.Backdrop;
+        _lastVerticalText     = result.VerticalText;
+        _lastTargetLang       = result.TargetLang;
+        _captureFilter        = result.Filter;
+        _captureFilterShapes  = result.FilterShapes;
+        _captureFilterRequest = result.FilterRequest;
+        _lastEngineUsage      = result.EngineUsage;
     }
 
     /// <summary>Hands the overlay the bubbles as <paramref name="state"/> has them now.</summary>
@@ -1770,6 +1891,7 @@ public partial class MainWindow : Window
         DisposeSessionHooks();
         CancelSession();
         _ocrReuse.Clear();
+        _reframe.Clear();
 
         // A voice reading a selection that is no longer on screen has nothing left to be about, and
         // nothing would be left to stop it: the button that does is going with the toolbar.

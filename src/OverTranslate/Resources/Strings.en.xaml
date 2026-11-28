@@ -198,6 +198,8 @@
     <sys:String x:Key="S.Toolbar.Translating">Translating...</sys:String>
     <sys:String x:Key="S.Toolbar.Recognising">Reading...</sys:String>
     <sys:String x:Key="S.Toolbar.Retranslate">Translate again</sys:String>
+    <sys:String x:Key="S.Toolbar.EditSelection">Edit selection</sys:String>
+    <sys:String x:Key="S.Toolbar.EditSelectionHint">Go back to the selection to change it</sys:String>
     <sys:String x:Key="S.Toolbar.ShowSource">Show source</sys:String>
     <sys:String x:Key="S.Toolbar.ShowTranslation">Show translation</sys:String>
     <sys:String x:Key="S.Toolbar.CopyText">Copy text</sys:String>
