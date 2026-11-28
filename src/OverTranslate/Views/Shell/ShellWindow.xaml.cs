@@ -418,13 +418,22 @@ public partial class ShellWindow : Window
         UpdateCardPopup.IsOpen = true;
     }
 
-    /// <summary>Right edge of the card under the right edge of the slot, whichever face it shows.</summary>
+    /// <summary>
+    /// Right edge of the card under the right edge of the slot, whichever face it shows, and the
+    /// caret under the middle of that face — the glyph fills the slot, the pill sits inside it
+    /// with a margin, so the middle is measured from the face rather than from the slot.
+    /// </summary>
     private void PlaceUpdateCard()
     {
         UpdateSlot.UpdateLayout();
         UpdateCardFrame.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         UpdateCardPopup.HorizontalOffset =
             UpdateSlot.ActualWidth - UpdateCardFrame.DesiredSize.Width + UpdateCardFrame.Padding.Right;
+
+        FrameworkElement face = UpdatePillBtn.IsVisible ? UpdatePillBtn : UpdateCardBtn;
+        double middle = face.TranslatePoint(new Point(face.ActualWidth / 2, 0), UpdateSlot).X;
+        double fromRight = UpdateSlot.ActualWidth - middle;
+        UpdateCardCaret.Margin = new Thickness(0, 4, Math.Max(10, fromRight - UpdateCardCaret.Width / 2), 0);
     }
 
     /// <summary>
@@ -440,12 +449,12 @@ public partial class ShellWindow : Window
 
         if (SystemParameters.ClientAreaAnimation)
         {
-            var scale = (ScaleTransform)UpdateCardPanel.RenderTransform;
+            var scale = (ScaleTransform)UpdateCardBody.RenderTransform;
             var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
             var duration = TimeSpan.FromMilliseconds(160);
             scale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.96, 1, duration) { EasingFunction = ease });
             scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.96, 1, duration) { EasingFunction = ease });
-            UpdateCardPanel.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, duration) { EasingFunction = ease });
+            UpdateCardBody.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, duration) { EasingFunction = ease });
         }
 
         // So Esc reaches the card: the popup is its own window and has no focus of its own.

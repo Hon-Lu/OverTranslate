@@ -142,7 +142,13 @@
                     <!-- The card. Three lines and nothing boxed inside it; a change of state only
                          rewrites the second line and its colour, so the card never changes size
                          under the pointer. The frame's padding is room for the shadow inside the
-                         popup's own window. -->
+                         popup's own window.
+
+                         Set 11 below the title bar rather than right under it: the content frame's
+                         top edge runs 4 below the title bar, and a card starting there lay along
+                         that line and read as stuck to the page. Lower, the line passes behind it,
+                         and the caret reaches back up to the face it came from (see PlaceUpdateCard),
+                         which is what ties the two together. -->
                     <Popup x:Name="UpdateCardPopup"
                            PlacementTarget="{Binding ElementName=UpdateSlot}"
                            Placement="Bottom"
@@ -151,22 +157,23 @@
                            Opened="UpdateCardPopup_Opened"
                            Closed="UpdateCardPopup_Closed">
                         <Border x:Name="UpdateCardFrame" Padding="14,0,14,18">
+                          <Grid x:Name="UpdateCardBody" RenderTransformOrigin="1,0">
+                            <Grid.RenderTransform>
+                                <ScaleTransform/>
+                            </Grid.RenderTransform>
                             <Border x:Name="UpdateCardPanel"
                                     Width="264"
+                                    Margin="0,11,0,0"
                                     Padding="14,14,14,12"
-                                    Background="{DynamicResource AppSurfaceBg}"
-                                    BorderBrush="{DynamicResource AppBorder}"
+                                    Background="{DynamicResource UpdateCardBg}"
+                                    BorderBrush="{DynamicResource UpdateCardBorder}"
                                     BorderThickness="1"
                                     CornerRadius="10"
                                     Focusable="True"
                                     FocusVisualStyle="{x:Null}"
-                                    RenderTransformOrigin="1,0"
                                     KeyDown="UpdateCardPanel_KeyDown">
-                                <Border.RenderTransform>
-                                    <ScaleTransform/>
-                                </Border.RenderTransform>
                                 <Border.Effect>
-                                    <DropShadowEffect BlurRadius="18" ShadowDepth="4" Direction="270" Opacity="0.28"/>
+                                    <DropShadowEffect BlurRadius="28" ShadowDepth="8" Direction="270" Opacity="0.4"/>
                                 </Border.Effect>
                                 <StackPanel>
                                     <TextBlock FontFamily="{DynamicResource AppFont}"
@@ -216,11 +223,30 @@
                                         <Button DockPanel.Dock="Right"
                                                 Style="{StaticResource UpdateCardLink}"
                                                 VerticalAlignment="Center"
-                                                Content="{DynamicResource S.Update.HistoryHeading}"
-                                                Click="UpdateCardHistoryBtn_Click"/>
+                                                AutomationProperties.Name="{DynamicResource S.Update.HistoryHeading}"
+                                                Click="UpdateCardHistoryBtn_Click">
+                                            <TextBlock>
+                                                <Run Text="{DynamicResource S.Update.HistoryHeading}"/>
+                                                <Run Text="›"/>
+                                            </TextBlock>
+                                        </Button>
                                     </DockPanel>
                                 </StackPanel>
                             </Border>
+                            <!-- The caret, pointing at the middle of whichever face opened the card;
+                                 PlaceUpdateCard sets its right margin. It overlaps the card's top edge
+                                 by a pixel so its fill opens the border where the two meet. -->
+                            <Grid x:Name="UpdateCardCaret"
+                                  Width="14" Height="8"
+                                  Margin="0,4,16,0"
+                                  HorizontalAlignment="Right"
+                                  VerticalAlignment="Top">
+                                <Path Data="M0,8 L7,1 L14,8 Z" Fill="{DynamicResource UpdateCardBg}"/>
+                                <Path Data="M0,7.5 L7,0.5 L14,7.5"
+                                      Stroke="{DynamicResource UpdateCardBorder}"
+                                      StrokeThickness="1"/>
+                            </Grid>
+                          </Grid>
                         </Border>
                     </Popup>
                 </Grid>

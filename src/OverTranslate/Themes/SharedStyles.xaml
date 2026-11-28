@@ -2917,12 +2917,13 @@
         </Setter>
     </Style>
 
-    <!-- A text link on the update card (更新紀錄): secondary text that takes the accent under the
-         pointer, so it reads as the card's lesser action beside its button. -->
+    <!-- A text link on the update card (更新紀錄 ›): accent text with a chevron, so it reads as
+         somewhere to go beside the card's one button. It was secondary grey once, and next to a
+         button that read as a label that had been turned off. -->
     <Style x:Key="UpdateCardLink" TargetType="Button">
         <Setter Property="FontFamily" Value="{DynamicResource AppFont}"/>
         <Setter Property="FontSize"   Value="12.5"/>
-        <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
+        <Setter Property="Foreground" Value="{DynamicResource AppAccent}"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Cursor"     Value="Hand"/>
         <Setter Property="Template">
@@ -2933,10 +2934,10 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Foreground" Value="{DynamicResource AppAccent}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource AppAccentHover}"/>
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter Property="Foreground" Value="{DynamicResource AppAccent}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource AppAccentHover}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

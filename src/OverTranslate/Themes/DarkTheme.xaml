@@ -8,6 +8,9 @@
     <SolidColorBrush x:Key="AppCardBg"         Color="#252525"/>
     <SolidColorBrush x:Key="AppBorder"         Color="#3C3C3C"/>
     <SolidColorBrush x:Key="AppSubtleBorder"   Color="#303030"/>
+    <!-- The 版本與更新 card in the title bar: a step lighter than the content it floats over, with a firmer edge, so it reads as above the page rather than part of it. -->
+    <SolidColorBrush x:Key="UpdateCardBg"      Color="#323232"/>
+    <SolidColorBrush x:Key="UpdateCardBorder"  Color="#474747"/>
     <!-- The 1px between the rows of a group (Controls/AttachedRows): AppCardBg, the section's own fill, as if the rows were simply a pixel apart. -->
     <SolidColorBrush x:Key="AppRowSeam"        Color="#252525"/>
 
@@ -107,12 +110,12 @@
     <!-- The hairline around a colour swatch in the 標記 palette. One neutral edge for all
          eight, so the two that would otherwise vanish into the bar — white here, black in the
          other theme — are the same object as the six that would not. -->
-    <SolidColorBrush x:Key="ToolbarSwatchEdge" Color="#5A5A5A"/>
-
-    <!-- The ink in the 螢光筆 icon, which is yellow in the way a trash can is a trash can:
-         not the colour currently chosen on the palette, but the one that says at a glance which
-         of the three tools this is. Darker in the light theme because the bar there is nearly
-         white, and the yellow that reads on a dark bar disappears into a pale one. -->
+    <SolidColorBrush x:Key="ToolbarSwatchEdge" Color="#5A5A5A"/>
+
+    <!-- The ink in the 螢光筆 icon, which is yellow in the way a trash can is a trash can:
+         not the colour currently chosen on the palette, but the one that says at a glance which
+         of the three tools this is. Darker in the light theme because the bar there is nearly
+         white, and the yellow that reads on a dark bar disappears into a pale one. -->
     <SolidColorBrush x:Key="ToolbarHighlighterInk" Color="#FACC15"/>
 
     <!-- The primary action on a floating toolbar. Its own blue rather than AppAccent, for the one
