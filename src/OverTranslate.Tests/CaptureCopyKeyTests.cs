@@ -81,7 +81,7 @@ public class CaptureCopyKeyTests
         Assert.Equal(CaptureCopyKeyVerdict.Copy, Down(keys));
     }
 
-    // ── Held and repeated ───────────────────────────────────────────────────
+    // ── One per Ctrl ────────────────────────────────────────────────────────
 
     [Fact]
     public void HeldC_CopiesOnceAndSwallowsTheRepeats()
@@ -92,33 +92,74 @@ public class CaptureCopyKeyTests
             Assert.Equal(CaptureCopyKeyVerdict.Swallow, Down(keys));
     }
 
+    /// <summary>Ctrl+C+C: one screenshot, and neither C reaches 取詞翻譯 or the application.</summary>
     [Fact]
-    public void ReleasedAndPressedAgain_CopiesAgain()
+    public void CtrlCC_IsOneScreenshotAndBothCsSwallowed()
     {
         var keys = new CaptureCopyKey();
         Assert.Equal(CaptureCopyKeyVerdict.Copy, Down(keys));
+        Up(keys);
+        Assert.Equal(CaptureCopyKeyVerdict.Swallow, Down(keys));
+    }
+
+    [Fact]
+    public void CtrlReleasedAndPressedAgain_CopiesAgain()
+    {
+        var keys = new CaptureCopyKey();
+        Assert.Equal(CaptureCopyKeyVerdict.Copy, Down(keys));
+        Up(keys);
+        Assert.Equal(CaptureCopyKeyVerdict.Pass, Up(keys, 0xA2, ctrl: true)); // left Ctrl coming up
+        Assert.Equal(CaptureCopyKeyVerdict.Copy, Down(keys));
+    }
+
+    /// <summary>The release can come through as the generic Ctrl, or be missed and only show in the modifier state.</summary>
+    [Fact]
+    public void CtrlSeenUpByAnyKey_CopiesAgain()
+    {
+        var keys = new CaptureCopyKey();
+        Assert.Equal(CaptureCopyKeyVerdict.Copy, Down(keys));
+        Assert.True(keys.HoldingTakenCopy);
+        Down(keys, V, ctrl: false);
+        Assert.False(keys.HoldingTakenCopy);
+        Assert.Equal(CaptureCopyKeyVerdict.Copy, Down(keys));
+    }
+
+    /// <summary>
+    /// Ctrl held, C then V: the copy is taken and the paste is not — with 截圖後自動關閉 on it is the
+    /// one stroke that copies, closes and pastes the picture.
+    /// </summary>
+    [Fact]
+    public void CtrlCThenV_UnderOneCtrl_PastesThrough()
+    {
+        var keys = new CaptureCopyKey();
+        Assert.Equal(CaptureCopyKeyVerdict.Copy, Down(keys));
+        Assert.Equal(CaptureCopyKeyVerdict.Pass, Up(keys));
+        Assert.Equal(CaptureCopyKeyVerdict.Pass, Down(keys, V));
+        Assert.Equal(CaptureCopyKeyVerdict.Pass, Up(keys, V));
+        Assert.True(keys.HoldingTakenCopy);
+    }
+
+    /// <summary>While a taken copy's Ctrl is down, only C is held back; every other key passes.</summary>
+    [Theory]
+    [InlineData(0x56u)] // V
+    [InlineData(0x5Au)] // Z
+    [InlineData(0x41u)] // A
+    [InlineData(0x10u)] // Shift
+    public void WhileHoldingTakenCopy_OtherKeysPass(uint key)
+    {
+        var keys = new CaptureCopyKey();
         Down(keys);
-        Up(keys);
-        Assert.Equal(CaptureCopyKeyVerdict.Copy, Down(keys));
-    }
-
-    /// <summary>Ctrl+C+C: two presses of C under one Ctrl are two screenshots, never 取詞.</summary>
-    [Fact]
-    public void CtrlCC_IsTwoPressesBothTaken()
-    {
-        var keys = new CaptureCopyKey();
-        Assert.Equal(CaptureCopyKeyVerdict.Copy, Down(keys));
-        Up(keys);
-        Assert.Equal(CaptureCopyKeyVerdict.Copy, Down(keys));
+        Assert.Equal(CaptureCopyKeyVerdict.Pass, Down(keys, key));
+        Assert.Equal(CaptureCopyKeyVerdict.Pass, Up(keys, key));
     }
 
     [Fact]
-    public void ARepeatOfAPressThatWasNotTaken_IsNotTakenEither()
+    public void ARepeatAfterTyping_IsNotTakenEither()
     {
         var keys = new CaptureCopyKey();
         Assert.Equal(CaptureCopyKeyVerdict.Pass, Down(keys, typing: true));
-        Assert.Equal(CaptureCopyKeyVerdict.Pass, Down(keys));
-        Assert.Equal(CaptureCopyKeyVerdict.Pass, Down(keys, shift: true));
+        Assert.Equal(CaptureCopyKeyVerdict.Pass, Down(keys, typing: true));
+        Assert.False(keys.HoldingTakenCopy);
     }
 
     /// <summary>Ctrl let go with C still held: what repeats now is a plain c, and it is not ours.</summary>
@@ -128,14 +169,6 @@ public class CaptureCopyKeyTests
         var keys = new CaptureCopyKey();
         Assert.Equal(CaptureCopyKeyVerdict.Copy, Down(keys));
         Assert.Equal(CaptureCopyKeyVerdict.Pass, Down(keys, ctrl: false));
-    }
-
-    [Fact]
-    public void ReleasingAnotherKey_DoesNotEndTheHeldC()
-    {
-        var keys = new CaptureCopyKey();
-        Assert.Equal(CaptureCopyKeyVerdict.Copy, Down(keys));
-        Up(keys, V);
-        Assert.Equal(CaptureCopyKeyVerdict.Swallow, Down(keys));
+        Assert.False(keys.HoldingTakenCopy);
     }
 }

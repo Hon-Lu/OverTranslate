@@ -27,6 +27,12 @@ namespace OverTranslate.Services;
 /// after 取詞翻譯's sequence hook, this one is asked first, so a Ctrl+C+C here is one screenshot
 /// and nothing for 取詞翻譯 to count.</para>
 ///
+/// <para>It outlasts the capture by as long as Ctrl stays down, when a Ctrl+C it took is what ended
+/// the capture (截圖後自動關閉). Taken off at once, the C still under the finger would repeat into
+/// the application now uncovered, which copies its own selection over the screenshot just put on
+/// the clipboard. Only C is held back in that time: Ctrl+C then V in one stroke — copy, close,
+/// paste — has to paste.</para>
+///
 /// <para>Our own synthesised keys go past: 取詞翻譯 and 替換翻譯 send a Ctrl+C of their own, which
 /// must copy the selection they were asked about, not take a screenshot.</para>
 /// </remarks>
@@ -82,6 +88,12 @@ internal sealed class CaptureCopyKeyHook : IDisposable
     // Touched only on the hook thread.
     private readonly CaptureCopyKey _keys = new();
     private IntPtr _hookId;
+    private bool _retiring;
+
+    // The longest the hook stays up after the capture for a Ctrl that is never seen to come up — a
+    // release taken by the lock screen, say. Long enough for any held copy, short enough that a key
+    // lost that way costs nobody a C for long.
+    private static readonly TimeSpan RetireLimit = TimeSpan.FromSeconds(2);
 
     private CaptureCopyKeyHook(Action onCopy)
     {
@@ -132,6 +144,14 @@ internal sealed class CaptureCopyKeyHook : IDisposable
             win: IsDown(VK_LWIN) || IsDown(VK_RWIN),
             typing: down && TypingWindows.HaveForeground);
 
+        if (_retiring)
+        {
+            // The capture is over: a held C is still swallowed, but nothing is copied any more.
+            var next = CallNextHookEx(_hookId, nCode, wParam, lParam);
+            if (verdict == CaptureCopyKeyVerdict.Pass && !_keys.HoldingTakenCopy) Retire();
+            return verdict == CaptureCopyKeyVerdict.Pass ? next : (IntPtr)1;
+        }
+
         switch (verdict)
         {
             case CaptureCopyKeyVerdict.Copy:
@@ -145,14 +165,39 @@ internal sealed class CaptureCopyKeyHook : IDisposable
         }
     }
 
+    /// <summary>
+    /// Takes the hook off — at once, or, while the Ctrl of a Ctrl+C it took is still down, once
+    /// that Ctrl comes up (see the remarks). Returns without waiting either way.
+    /// </summary>
     public void Dispose()
     {
-        // On the hook thread: a hook can only be removed from the thread that installed it.
-        _thread.Stop(() =>
+        if (_thread.Dispatcher is not { } dispatcher) return;
+        dispatcher.BeginInvoke(() =>
         {
-            if (_hookId == IntPtr.Zero) return;
+            if (_retiring) return;
+            if (_hookId == IntPtr.Zero || !_keys.HoldingTakenCopy)
+            {
+                Retire();
+                return;
+            }
+
+            _retiring = true;
+            var limit = new System.Windows.Threading.DispatcherTimer { Interval = RetireLimit };
+            limit.Tick += (_, _) => { limit.Stop(); Retire(); };
+            limit.Start();
+        });
+    }
+
+    /// <summary>On the hook thread: unhooks and ends the thread. Safe to call more than once.</summary>
+    private void Retire()
+    {
+        if (_hookId != IntPtr.Zero)
+        {
             UnhookWindowsHookEx(_hookId);
             _hookId = IntPtr.Zero;
-        });
+        }
+
+        System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvokeShutdown(
+            System.Windows.Threading.DispatcherPriority.Normal);
     }
 }
