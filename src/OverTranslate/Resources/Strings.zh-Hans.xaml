@@ -947,8 +947,10 @@
     <sys:String x:Key="S.Toolbar.DebugAssistOn">{0} 项开启</sys:String>
     <sys:String x:Key="S.Toolbar.CloseAfterCopy">截图后自动关闭</sys:String>
     <sys:String x:Key="S.Toolbar.CloseAfterCopyTip">点击“截图”复制到剪贴板后，直接结束截图翻译</sys:String>
-    <sys:String x:Key="S.Toolbar.MoreContent">翻译内容</sys:String>
-    <sys:String x:Key="S.Toolbar.MoreGeneral">常规</sys:String>
+    <sys:String x:Key="S.Toolbar.CopyOnCtrlC">Ctrl+C 复制截图</sys:String>
+    <sys:String x:Key="S.Toolbar.CopyOnCtrlCTip">框选完成后，按 Ctrl+C 即可截图</sys:String>
+    <sys:String x:Key="S.Toolbar.MoreTranslation">翻译</sys:String>
+    <sys:String x:Key="S.Toolbar.MoreScreenshot">截图</sys:String>
     <sys:String x:Key="S.Toolbar.MoreOther">其他</sys:String>
     <sys:String x:Key="S.Toolbar.InfoIcon">说明</sys:String>
     <sys:String x:Key="S.Toolbar.AutoTranslate">自动翻译</sys:String>

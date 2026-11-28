@@ -56,6 +56,21 @@ public class CaptureSettings
     public bool CloseAfterCopy { get; set; } = false;
 
     /// <summary>
+    /// Whether Ctrl+C, once a selection is drawn, does what pressing 截圖 does. Off by default, and a
+    /// settings file written before it existed reads as off; set from the toolbar's 設定 menu (#445).
+    /// </summary>
+    /// <remarks>
+    /// <para>For someone who uses the capture as a screenshot tool, for whom the last step of every
+    /// capture was moving the pointer to the camera. Off by default for the reasons #323 left it out:
+    /// on a bar that copies both a picture and text, Ctrl+C meaning the picture is a choice only the
+    /// user can make, and with 截圖後自動關閉 on, a stray one ends the capture.</para>
+    ///
+    /// <para>Exactly the button, nothing of its own: 儲存截圖 and 截圖後自動關閉 follow it, and while
+    /// the button cannot be pressed neither can this. See <see cref="Services.CaptureCopyKey"/>.</para>
+    /// </remarks>
+    public bool CopyOnCtrlC { get; set; } = false;
+
+    /// <summary>
     /// Whether a capture leaves out the groups with nothing in them to translate — numbers, stat
     /// abbreviations, symbols — as realtime translation's 過濾數字與縮寫 does. Off by default, and a
     /// settings file written before it existed reads as off; set from the toolbar's 設定 menu.

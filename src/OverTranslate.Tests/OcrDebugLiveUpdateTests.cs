@@ -75,7 +75,7 @@ public class OcrDebugLiveUpdateTests
         Assert.Equal("30", (string?)more.Attribute("Width"));
         Assert.Equal("30", (string?)more.Attribute("Height"));
         Assert.Equal("{DynamicResource S.Shell.Settings}", (string?)more.Attribute("ToolTip"));
-        Assert.Equal(new[] { "FilterNumbersSwitch", "AutoTranslateSwitch", "SaveScreenshotSwitch", "CloseAfterCopySwitch", "ModelHintSwitch", "DebugGroupsSwitch", "DebugLinesSwitch" },
+        Assert.Equal(new[] { "AutoTranslateSwitch", "FilterNumbersSwitch", "SaveScreenshotSwitch", "CloseAfterCopySwitch", "CopyOnCtrlCSwitch", "ModelHintSwitch", "DebugGroupsSwitch", "DebugLinesSwitch" },
             popup.Descendants().Where(e => e.Name.LocalName == "CheckBox").Select(e => (string?)e.Attribute(x + "Name")));
         Assert.All(popup.Descendants().Where(e => e.Name.LocalName == "CheckBox"),
             e => Assert.Equal("{StaticResource ToolbarMenuToggle}", (string?)e.Attribute("Style")));

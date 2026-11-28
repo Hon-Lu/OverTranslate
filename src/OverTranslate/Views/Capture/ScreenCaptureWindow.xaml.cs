@@ -59,6 +59,15 @@ public partial class ScreenCaptureWindow : Window
     public Bitmap? CroppedBitmap { get; private set; }
     public bool HasSelection => _hasSelection;
 
+    // Published for Ctrl+C 複製截圖's hook, which reads it from a thread of its own (r2). An int
+    // behind Volatile so the hook sees each change as it is made, not a value cached on its core.
+    private int _selectionState = (int)CaptureSelectionState.None;
+
+    /// <summary>Where the box stands, for <see cref="CaptureCopyKeyHook"/>. Safe from any thread.</summary>
+    internal CaptureSelectionState SelectionState => (CaptureSelectionState)Volatile.Read(ref _selectionState);
+
+    private void PublishState(CaptureSelectionState state) => Volatile.Write(ref _selectionState, (int)state);
+
     private double _dpiX = 1.0;
     private double _dpiY = 1.0;
 
@@ -76,6 +85,14 @@ public partial class ScreenCaptureWindow : Window
         Height = SystemParameters.VirtualScreenHeight;
 
         Cursor = LoadCrosshairCursor();
+
+        // A drag on the box or a handle is the box being adjusted: a Ctrl+C in the middle of one
+        // settles it where it is, as one in the middle of the first drag does. See SettleForCopy.
+        foreach (var thumb in new[] { SelectionBody, TopLeftHandle, TopRightHandle, BottomLeftHandle, BottomRightHandle })
+        {
+            thumb.DragStarted += (_, _) => { if (_hasSelection) PublishState(CaptureSelectionState.Adjusting); };
+            thumb.DragCompleted += (_, _) => { if (_hasSelection) PublishState(CaptureSelectionState.Selected); };
+        }
 
         Closed += (_, _) =>
         {
@@ -229,6 +246,7 @@ public partial class ScreenCaptureWindow : Window
         SetFrameVisibility(true);
         CaptureMouse();
         DrawRect(_startPoint, _startPoint);
+        PublishState(CaptureSelectionState.DraggingTooSmall);
     }
 
     protected override void OnMouseRightButtonDown(MouseButtonEventArgs e)
@@ -242,19 +260,50 @@ public partial class ScreenCaptureWindow : Window
         base.OnMouseMove(e);
         if (!_isDragging) return;
         DrawRect(_startPoint, e.GetPosition(this));
+        PublishState(CaptureCopyKey.WhileDragging(_selectionWpfRect.Width, _selectionWpfRect.Height));
     }
 
     protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
     {
         base.OnMouseLeftButtonUp(e);
         if (!_isDragging) return;
+        FinishDrag(Normalize(_startPoint, e.GetPosition(this)));
+    }
+
+    /// <summary>
+    /// Ctrl+C 複製截圖 (r2): settles the box for a copy if it is being drawn or adjusted, exactly
+    /// where it is now. Returns whether there is a box to copy.
+    /// </summary>
+    /// <remarks>
+    /// A first drag ends as if the button had come up here: the mouse is let go of, and the rest of
+    /// the drag and the release itself change nothing, so the box is the one on screen the moment
+    /// the key went down rather than wherever the hand had got to by the time it came up. A handle
+    /// or the box being dragged later is let go of the same way.
+    /// </remarks>
+    public bool SettleForCopy()
+    {
+        if (_isDragging)
+        {
+            if (_selectionWpfRect.Width < CaptureCopyKey.MinBoxSize || _selectionWpfRect.Height < CaptureCopyKey.MinBoxSize)
+                return false;
+            FinishDrag(_selectionWpfRect);
+        }
+
+        foreach (var thumb in new[] { SelectionBody, TopLeftHandle, TopRightHandle, BottomLeftHandle, BottomRightHandle })
+            if (thumb.IsDragging) thumb.CancelDrag();
+
+        return _hasSelection;
+    }
+
+    private void FinishDrag(Rect rect)
+    {
         _isDragging = false;
         ReleaseMouseCapture();
 
-        var rect = Normalize(_startPoint, e.GetPosition(this));
         _selectionWpfRect = rect;
-        if (rect.Width < 4 || rect.Height < 4)
+        if (rect.Width < CaptureCopyKey.MinBoxSize || rect.Height < CaptureCopyKey.MinBoxSize)
         {
+            PublishState(CaptureSelectionState.None);
             _hasSelection = false;
             SetFrameVisibility(false);
             SetHandlesVisibility(false);
@@ -264,6 +313,7 @@ public partial class ScreenCaptureWindow : Window
         }
 
         _hasSelection = true;
+        PublishState(CaptureSelectionState.Selected);
         SelectionRect.StrokeDashArray = null;
         UpdateSelectionMetadata();
         UpdateSelectionVisuals();

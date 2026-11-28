@@ -951,8 +951,10 @@
     <sys:String x:Key="S.Toolbar.DebugAssistOn">{0}개 켜짐</sys:String>
     <sys:String x:Key="S.Toolbar.CloseAfterCopy">스크린샷 후 자동으로 닫기</sys:String>
     <sys:String x:Key="S.Toolbar.CloseAfterCopyTip">‘스크린샷’으로 클립보드에 복사한 뒤 바로 종료합니다</sys:String>
-    <sys:String x:Key="S.Toolbar.MoreContent">번역 내용</sys:String>
-    <sys:String x:Key="S.Toolbar.MoreGeneral">일반</sys:String>
+    <sys:String x:Key="S.Toolbar.CopyOnCtrlC">Ctrl+C로 스크린샷 복사</sys:String>
+    <sys:String x:Key="S.Toolbar.CopyOnCtrlCTip">영역 선택 후 Ctrl+C를 누르면 스크린샷을 찍을 수 있습니다</sys:String>
+    <sys:String x:Key="S.Toolbar.MoreTranslation">번역</sys:String>
+    <sys:String x:Key="S.Toolbar.MoreScreenshot">스크린샷</sys:String>
     <sys:String x:Key="S.Toolbar.MoreOther">기타</sys:String>
     <sys:String x:Key="S.Toolbar.InfoIcon">설명</sys:String>
     <sys:String x:Key="S.Toolbar.AutoTranslate">자동 번역</sys:String>

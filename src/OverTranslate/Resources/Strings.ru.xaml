@@ -940,8 +940,10 @@
     <sys:String x:Key="S.Toolbar.DebugAssistOn">Включено: {0}</sys:String>
     <sys:String x:Key="S.Toolbar.CloseAfterCopy">Закрывать после снимка</sys:String>
     <sys:String x:Key="S.Toolbar.CloseAfterCopyTip">Завершает снимок экрана, как только «Снимок» скопирует его в буфер обмена</sys:String>
-    <sys:String x:Key="S.Toolbar.MoreContent">Перевод</sys:String>
-    <sys:String x:Key="S.Toolbar.MoreGeneral">Общие</sys:String>
+    <sys:String x:Key="S.Toolbar.CopyOnCtrlC">Копировать снимок по Ctrl+C</sys:String>
+    <sys:String x:Key="S.Toolbar.CopyOnCtrlCTip">После выделения нажмите Ctrl+C, чтобы сделать снимок</sys:String>
+    <sys:String x:Key="S.Toolbar.MoreTranslation">Перевод</sys:String>
+    <sys:String x:Key="S.Toolbar.MoreScreenshot">Снимок</sys:String>
     <sys:String x:Key="S.Toolbar.MoreOther">Другое</sys:String>
     <sys:String x:Key="S.Toolbar.InfoIcon">Подробнее</sys:String>
     <sys:String x:Key="S.Toolbar.AutoTranslate">Автоперевод</sys:String>

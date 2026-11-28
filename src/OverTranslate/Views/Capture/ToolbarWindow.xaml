@@ -606,11 +606,17 @@
                              in a paragraph under it - the panel opens over the capture being looked at, so
                              every line it spends is a line of the capture it hides.
 
-                             翻譯內容 first, on its own: the one switch here that changes what the
-                             translation says. 一般 and 其他 under it are things done besides
-                             translating, and 偵錯輔助 last. The switches are the settings page's own
-                             keys, so the two places always agree - see
-                             SettingsService.UpdateCaptureOptions.
+                             Grouped by what each switch is about rather than by how often it is
+                             used (#445). 翻譯 first: whether a selection is translated as soon as it
+                             is drawn, and what the translation leaves out. 截圖 next, named after the
+                             camera button on the bar: everything that happens when it is pressed -
+                             saved as well, the capture closed after, and Ctrl+C pressing it. 其他
+                             last, with 偵錯輔助 at the very end. The old 一般 had grown into a drawer
+                             for anything that was not translation; three of its four switches were
+                             about 截圖, so the heading now says so. Three sections, the same rows,
+                             no deeper levels: the menu sits over a frozen capture and is read at a
+                             glance. The switches are the settings page's own keys, so the two places
+                             always agree - see SettingsService.UpdateCaptureOptions.
 
                              Its right edge is lined up under the button that opens it (MoreBtn_Click), so
                              it reads as coming out of that button rather than out of the bar. No close
@@ -673,7 +679,14 @@
                                         </Style>
                                     </StackPanel.Resources>
 
-                                    <TextBlock Text="{DynamicResource S.Toolbar.MoreContent}" Style="{StaticResource MoreSectionHeader}"/>
+                                    <TextBlock Text="{DynamicResource S.Toolbar.MoreTranslation}" Style="{StaticResource MoreSectionHeader}"/>
+                                    <!-- Takes effect from the next selection: it is read the moment a
+                                         selection is finished, and this one already was. -->
+                                    <CheckBox x:Name="AutoTranslateSwitch" Style="{StaticResource ToolbarMenuToggle}"
+                                              Tag="&#xE774;"
+                                              Content="{DynamicResource S.Toolbar.AutoTranslate}"
+                                              ToolTip="{DynamicResource S.Settings.AutoTranslateCheck}"
+                                              Checked="AutoTranslateSwitch_Changed" Unchecked="AutoTranslateSwitch_Changed"/>
                                     <!-- Turned over the capture on screen as well as the next one: see
                                          CaptureFilteredTranslation. No tooltip on the row: what it
                                          covers is the info mark's card, and a second hint on the
@@ -720,14 +733,7 @@
                                         </StackPanel>
                                     </CheckBox>
 
-                                    <TextBlock Text="{DynamicResource S.Toolbar.MoreGeneral}" Style="{StaticResource MoreSectionHeaderAfter}"/>
-                                    <!-- Takes effect from the next selection: it is read the moment a
-                                         selection is finished, and this one already was. -->
-                                    <CheckBox x:Name="AutoTranslateSwitch" Style="{StaticResource ToolbarMenuToggle}"
-                                              Tag="&#xE774;"
-                                              Content="{DynamicResource S.Toolbar.AutoTranslate}"
-                                              ToolTip="{DynamicResource S.Settings.AutoTranslateCheck}"
-                                              Checked="AutoTranslateSwitch_Changed" Unchecked="AutoTranslateSwitch_Changed"/>
+                                    <TextBlock Text="{DynamicResource S.Toolbar.MoreScreenshot}" Style="{StaticResource MoreSectionHeaderAfter}"/>
                                     <!-- Where to change the folder, not the folder itself. A folder picker
                                          or an Explorer window opened from this bar would land under the
                                          capture overlay, which is full screen and topmost; and the notice
@@ -751,6 +757,14 @@
                                               Content="{DynamicResource S.Toolbar.CloseAfterCopy}"
                                               ToolTip="{DynamicResource S.Toolbar.CloseAfterCopyTip}"
                                               Checked="CloseAfterCopySwitch_Changed" Unchecked="CloseAfterCopySwitch_Changed"/>
+                                    <!-- Last of the three: it is a way of pressing 截圖, and the two above say what
+                                         pressing it does. Plain Ctrl+C only, and only once the selection is drawn;
+                                         see CaptureSettings.CopyOnCtrlC and CaptureCopyKey. -->
+                                    <CheckBox x:Name="CopyOnCtrlCSwitch" Style="{StaticResource ToolbarMenuToggle}"
+                                              Tag="&#xE765;"
+                                              Content="{DynamicResource S.Toolbar.CopyOnCtrlC}"
+                                              ToolTip="{DynamicResource S.Toolbar.CopyOnCtrlCTip}"
+                                              Checked="CopyOnCtrlCSwitch_Changed" Unchecked="CopyOnCtrlCSwitch_Changed"/>
 
                                     <TextBlock Text="{DynamicResource S.Toolbar.MoreOther}" Style="{StaticResource MoreSectionHeaderAfter}"/>
                                     <!-- The model footer under this bar (CaptureSettings.ShowModelHint).

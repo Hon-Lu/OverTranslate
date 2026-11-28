@@ -1172,4 +1172,24 @@ public class SettingsParsingTests
         Assert.False(annotation.TextUnderline);
         Assert.True(annotation.TextStrikethrough);
     }
+
+    /// <summary>Ctrl+C 複製截圖 (#445) is off unless the user turned it on.</summary>
+    [Fact]
+    public void CopyOnCtrlC_IsOffByDefaultAndInFilesFromBeforeIt()
+    {
+        Assert.False(new CaptureSettings().CopyOnCtrlC);
+        Assert.False(SettingsService.Parse("{}").Capture.CopyOnCtrlC);
+        Assert.False(SettingsService.Parse("""{"Capture":{"CloseAfterCopy":true}}""").Capture.CopyOnCtrlC);
+        Assert.True(SettingsService.Parse("""{"Capture":{"CopyOnCtrlC":true}}""").Capture.CopyOnCtrlC);
+    }
+
+    /// <summary>Once on, it stays on across a restart.</summary>
+    [Fact]
+    public void CopyOnCtrlC_RoundTripsThroughTheFile()
+    {
+        var written = new AppSettings();
+        written.Capture.CopyOnCtrlC = true;
+
+        Assert.True(SettingsService.Parse(SettingsService.Serialize(written)).Capture.CopyOnCtrlC);
+    }
 }
