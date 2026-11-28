@@ -161,6 +161,17 @@
                             <Grid.RenderTransform>
                                 <ScaleTransform/>
                             </Grid.RenderTransform>
+                            <!-- The shadow, on an empty twin behind the card rather than on the card:
+                                 an Effect rasterises what it is set on, and the card's text would lose
+                                 ClearType and look soft beside the window's. -->
+                            <Border Width="264"
+                                    Margin="0,11,0,0"
+                                    Background="{DynamicResource UpdateCardBg}"
+                                    CornerRadius="10">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="28" ShadowDepth="8" Direction="270" Opacity="0.4"/>
+                                </Border.Effect>
+                            </Border>
                             <Border x:Name="UpdateCardPanel"
                                     Width="264"
                                     Margin="0,11,0,0"
@@ -169,12 +180,10 @@
                                     BorderBrush="{DynamicResource UpdateCardBorder}"
                                     BorderThickness="1"
                                     CornerRadius="10"
+                                    RenderOptions.ClearTypeHint="Enabled"
                                     Focusable="True"
                                     FocusVisualStyle="{x:Null}"
                                     KeyDown="UpdateCardPanel_KeyDown">
-                                <Border.Effect>
-                                    <DropShadowEffect BlurRadius="28" ShadowDepth="8" Direction="270" Opacity="0.4"/>
-                                </Border.Effect>
                                 <StackPanel>
                                     <TextBlock FontFamily="{DynamicResource AppFont}"
                                                FontSize="13.5"

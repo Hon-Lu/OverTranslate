@@ -452,8 +452,17 @@ public partial class ShellWindow : Window
             var scale = (ScaleTransform)UpdateCardBody.RenderTransform;
             var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
             var duration = TimeSpan.FromMilliseconds(160);
+            var grow = new DoubleAnimation(0.96, 1, duration) { EasingFunction = ease };
+            // Let go of the animated values once it has landed, so the card rests at plain scale and
+            // nothing holds its text off the pixel grid.
+            grow.Completed += (_, _) =>
+            {
+                scale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+                scale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+                UpdateCardBody.BeginAnimation(OpacityProperty, null);
+            };
             scale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.96, 1, duration) { EasingFunction = ease });
-            scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.96, 1, duration) { EasingFunction = ease });
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty, grow);
             UpdateCardBody.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, duration) { EasingFunction = ease });
         }
 
