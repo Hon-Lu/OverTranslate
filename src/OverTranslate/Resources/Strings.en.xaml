@@ -950,7 +950,7 @@ same settings, the same seed usually gives the same output.</sys:String>
     <sys:String x:Key="S.Toolbar.CloseAfterCopy">Close after screenshot</sys:String>
     <sys:String x:Key="S.Toolbar.CloseAfterCopyTip">Ends the capture once "Screenshot" has copied it to the clipboard</sys:String>
     <sys:String x:Key="S.Toolbar.CopyOnCtrlC">Copy screenshot with Ctrl+C</sys:String>
-    <sys:String x:Key="S.Toolbar.CopyOnCtrlCTip">After selecting, Ctrl+C does the same as "Screenshot"</sys:String>
+    <sys:String x:Key="S.Toolbar.CopyOnCtrlCTip">After selecting, press Ctrl+C to take a screenshot</sys:String>
     <sys:String x:Key="S.Toolbar.MoreTranslation">Translation</sys:String>
     <sys:String x:Key="S.Toolbar.MoreScreenshot">Screenshot</sys:String>
     <sys:String x:Key="S.Toolbar.MoreOther">Other</sys:String>

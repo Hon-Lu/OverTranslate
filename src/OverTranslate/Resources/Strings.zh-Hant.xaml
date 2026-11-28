@@ -971,7 +971,7 @@
     <sys:String x:Key="S.Toolbar.CloseAfterCopy">截圖後自動關閉</sys:String>
     <sys:String x:Key="S.Toolbar.CloseAfterCopyTip">按下「截圖」複製到剪貼簿後，直接結束截圖翻譯</sys:String>
     <sys:String x:Key="S.Toolbar.CopyOnCtrlC">Ctrl+C 複製截圖</sys:String>
-    <sys:String x:Key="S.Toolbar.CopyOnCtrlCTip">框選後按 Ctrl+C，等同按下「截圖」</sys:String>
+    <sys:String x:Key="S.Toolbar.CopyOnCtrlCTip">框選完成後，按 Ctrl+C 即可截圖</sys:String>
     <sys:String x:Key="S.Toolbar.MoreTranslation">翻譯</sys:String>
     <sys:String x:Key="S.Toolbar.MoreScreenshot">截圖</sys:String>
     <sys:String x:Key="S.Toolbar.MoreOther">其他</sys:String>

@@ -952,7 +952,7 @@
     <sys:String x:Key="S.Toolbar.CloseAfterCopy">スクリーンショット後に閉じる</sys:String>
     <sys:String x:Key="S.Toolbar.CloseAfterCopyTip">「スクリーンショット」でクリップボードにコピーしたら、そのまま終了します</sys:String>
     <sys:String x:Key="S.Toolbar.CopyOnCtrlC">Ctrl+C でスクリーンショットをコピー</sys:String>
-    <sys:String x:Key="S.Toolbar.CopyOnCtrlCTip">範囲選択後の Ctrl+C を「スクリーンショット」と同じ動作にします</sys:String>
+    <sys:String x:Key="S.Toolbar.CopyOnCtrlCTip">範囲選択後、Ctrl+C でスクリーンショットを撮れます</sys:String>
     <sys:String x:Key="S.Toolbar.MoreTranslation">翻訳</sys:String>
     <sys:String x:Key="S.Toolbar.MoreScreenshot">スクリーンショット</sys:String>
     <sys:String x:Key="S.Toolbar.MoreOther">その他</sys:String>
