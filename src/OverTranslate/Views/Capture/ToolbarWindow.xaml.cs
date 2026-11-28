@@ -407,6 +407,16 @@ public partial class ToolbarWindow : Window
     private void CopyShotBtn_Click(object sender, RoutedEventArgs e)
         => CopyScreenshotRequested?.Invoke(this, EventArgs.Empty);
 
+    /// <summary>
+    /// Ctrl+C 複製截圖 (#445): presses 截圖 if it can be pressed, and does nothing when it cannot —
+    /// the key is the button, not a second way round it.
+    /// </summary>
+    public void RequestCopyScreenshot()
+    {
+        if (!IsVisible || !CopyShotBtn.IsVisible || !CopyShotBtn.IsEnabled) return;
+        CopyScreenshotRequested?.Invoke(this, EventArgs.Empty);
+    }
+
     private void AnnotateBtn_Click(object sender, RoutedEventArgs e)
         => AnnotateModeChanged?.Invoke(this, IsAnnotating);
 
@@ -766,6 +776,7 @@ public partial class ToolbarWindow : Window
         AutoTranslateSwitch.IsChecked = SettingsService.Instance.Current.AutoTranslateAfterSelection;
         SaveScreenshotSwitch.IsChecked = SettingsService.Instance.Current.SaveScreenshotToDisk;
         CloseAfterCopySwitch.IsChecked = SettingsService.Instance.Current.Capture.CloseAfterCopy;
+        CopyOnCtrlCSwitch.IsChecked = SettingsService.Instance.Current.Capture.CopyOnCtrlC;
         ModelHintSwitch.IsChecked = SettingsService.Instance.Current.Capture.ShowModelHint;
         FilterNumbersSwitch.IsChecked = SettingsService.Instance.Current.Capture.FilterNumbersAndAbbreviations;
         _syncingCapture = false;
@@ -805,6 +816,12 @@ public partial class ToolbarWindow : Window
     private void CloseAfterCopySwitch_Changed(object sender, RoutedEventArgs e)
     {
         if (!_syncingCapture) SettingsService.Instance.UpdateCaptureOptions(closeAfterCopy: CloseAfterCopySwitch.IsChecked == true);
+    }
+
+    // The key itself is put on and taken off by MainWindow, which hears the same change.
+    private void CopyOnCtrlCSwitch_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_syncingCapture) SettingsService.Instance.UpdateCaptureOptions(copyOnCtrlC: CopyOnCtrlCSwitch.IsChecked == true);
     }
 
     private void MoreBtn_Click(object sender, RoutedEventArgs e)

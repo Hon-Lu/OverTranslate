@@ -48,6 +48,7 @@ public partial class MainWindow : Window
     private Models.AnnotationTool _annotationTool = AnnotationPanelWindow.DefaultTool;
     private GlobalEscapeHook? _escapeHook; // lives for the whole capture session, see CloseAll
     private SystemRecoveryYield? _recoveryYield; // same lifetime; lets Task Manager out from under the layers
+    private CaptureCopyKeyHook? _copyKey; // Ctrl+C 複製截圖, selection to teardown; see SyncCaptureCopyKey
     private CancellationTokenSource? _sessionCts; // cancelled on teardown so abandoned work stops
     private EventHandler? _overlayClosedHandler; // tracked so we can detach before re-translate
     // Recognition and translation are not owned here — see AppServices. This window is one of two
@@ -135,6 +136,9 @@ public partial class MainWindow : Window
         // about a window created after it started, so a popup left up would be read back into the
         // subtitles — see OnQuickLookupHotkeyPressed, which is the half that keeps a new one out.
         RealtimeSessionController.Instance.StateChanged += OnRealtimeStateChanged;
+
+        // Ctrl+C 複製截圖 switched in the toolbar's menu mid-capture takes effect there and then.
+        SettingsService.Instance.CaptureOptionsChanged += (_, _) => SyncCaptureCopyKey();
     }
 
     private void OnRealtimeStateChanged(object? sender, EventArgs e) =>
@@ -951,6 +955,7 @@ public partial class MainWindow : Window
         toolbar.Show();
 
         ApplyCaptureTopmost();
+        SyncCaptureCopyKey();
     }
 
     // On re-translate: update the existing overlay in-place to avoid z-order fights with
@@ -2087,6 +2092,37 @@ public partial class MainWindow : Window
 
         _recoveryYield?.Dispose();
         _recoveryYield = null;
+
+        _copyKey?.Dispose();
+        _copyKey = null;
+    }
+
+    /// <summary>
+    /// Puts Ctrl+C 複製截圖 (#445) on or takes it off, as the switch and the session now stand.
+    /// </summary>
+    /// <remarks>
+    /// Called once the toolbar is up — the selection is finished then, and not before — and again
+    /// whenever the switch changes, so turning it on or off mid-capture works from that moment.
+    /// The toolbar is the test for a selection: it exists from the selection being finished to the
+    /// teardown, which takes the hook off with the other session hooks.
+    /// </remarks>
+    private void SyncCaptureCopyKey()
+    {
+        bool want = CaptureCopyKey.ShouldListen(
+            SettingsService.Instance.Current.Capture.CopyOnCtrlC, _toolbarWindow != null);
+        if (want == (_copyKey != null)) return;
+
+        if (want)
+        {
+            _copyKey = CaptureCopyKeyHook.Install(() => _toolbarWindow?.RequestCopyScreenshot());
+            Log.Info("Ctrl+C 複製截圖 listening");
+        }
+        else
+        {
+            _copyKey!.Dispose();
+            _copyKey = null;
+            Log.Info("Ctrl+C 複製截圖 stopped");
+        }
     }
 
     // Puts the session's windows where the recovery watch says they belong. Called both when it
