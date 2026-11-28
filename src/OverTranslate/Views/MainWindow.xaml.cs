@@ -48,7 +48,8 @@ public partial class MainWindow : Window
     private Models.AnnotationTool _annotationTool = AnnotationPanelWindow.DefaultTool;
     private GlobalEscapeHook? _escapeHook; // lives for the whole capture session, see CloseAll
     private SystemRecoveryYield? _recoveryYield; // same lifetime; lets Task Manager out from under the layers
-    private CaptureCopyKeyHook? _copyKey; // Ctrl+C 複製截圖, selection to teardown; see SyncCaptureCopyKey
+    private CaptureCopyKeyHook? _copyKey; // Ctrl+C 複製截圖, for the capture's whole life; see SyncCaptureCopyKey
+    private readonly PendingCaptureCopy _pendingCopy = new(); // a Ctrl+C taken before the toolbar was up
     private CancellationTokenSource? _sessionCts; // cancelled on teardown so abandoned work stops
     private EventHandler? _overlayClosedHandler; // tracked so we can detach before re-translate
     // Recognition and translation are not owned here — see AppServices. This window is one of two
@@ -852,6 +853,10 @@ public partial class MainWindow : Window
             DisposeSessionHooks();
             _escapeHook = GlobalEscapeHook.Install(() => CloseAll("esc hook"));
 
+            // With Esc and for the same reason (r2): up before the box is, so a Ctrl+C the moment
+            // the mouse comes up is already ours. Whether it takes a given press is the box's say.
+            SyncCaptureCopyKey();
+
             // Paired with the Esc hook and for the same reason: these windows cover the screen, so
             // both ways out of a session that has gone wrong have to be set up before it can.
             _recoveryYield = SystemRecoveryYield.Install(ApplyCaptureTopmost);
@@ -955,7 +960,14 @@ public partial class MainWindow : Window
         toolbar.Show();
 
         ApplyCaptureTopmost();
-        SyncCaptureCopyKey();
+
+        // A Ctrl+C that came between the box being settled and this toolbar: pressed now, as if
+        // the toolbar had been there for it.
+        if (_pendingCopy.ToolbarReady())
+        {
+            Log.Info("Ctrl+C 複製截圖 taken before the toolbar was up; copying now");
+            toolbar.RequestCopyScreenshot();
+        }
     }
 
     // On re-translate: update the existing overlay in-place to avoid z-order fights with
@@ -2095,26 +2107,30 @@ public partial class MainWindow : Window
 
         _copyKey?.Dispose();
         _copyKey = null;
+        _pendingCopy.Clear();
     }
 
     /// <summary>
     /// Puts Ctrl+C 複製截圖 (#445) on or takes it off, as the switch and the session now stand.
     /// </summary>
     /// <remarks>
-    /// Called once the toolbar is up — the selection is finished then, and not before — and again
-    /// whenever the switch changes, so turning it on or off mid-capture works from that moment.
-    /// The toolbar is the test for a selection: it exists from the selection being finished to the
-    /// teardown, which takes the hook off with the other session hooks.
+    /// Called as the capture comes up, with the Esc hook, and again whenever the switch changes, so
+    /// turning it on or off mid-capture works from that moment. The teardown takes the hook off with
+    /// the other session hooks. Which presses it takes is decided by the capture window's
+    /// <see cref="ScreenCaptureWindow.SelectionState"/>, read from the hook's own thread.
     /// </remarks>
     private void SyncCaptureCopyKey()
     {
+        var captureWindow = _captureWindow;
         bool want = CaptureCopyKey.ShouldListen(
-            SettingsService.Instance.Current.Capture.CopyOnCtrlC, _toolbarWindow != null);
+            SettingsService.Instance.Current.Capture.CopyOnCtrlC, captureWindow != null);
         if (want == (_copyKey != null)) return;
 
         if (want)
         {
-            _copyKey = CaptureCopyKeyHook.Install(() => _toolbarWindow?.RequestCopyScreenshot());
+            _copyKey = CaptureCopyKeyHook.Install(
+                () => CaptureCopyKey.TakesCopy(captureWindow!.SelectionState),
+                () => OnCaptureCopyKey(captureWindow!));
             Log.Info("Ctrl+C 複製截圖 listening");
         }
         else
@@ -2123,6 +2139,22 @@ public partial class MainWindow : Window
             _copyKey = null;
             Log.Info("Ctrl+C 複製截圖 stopped");
         }
+    }
+
+    /// <summary>A Ctrl+C taken by <see cref="CaptureCopyKeyHook"/>, on the dispatcher.</summary>
+    /// <remarks>
+    /// A box still being drawn or adjusted is settled where it is first (SettleForCopy), which for a
+    /// first drag finishes the selection exactly as letting go would — the toolbar is built on the
+    /// way back from that, and the copy waits for it in <see cref="_pendingCopy"/>.
+    /// </remarks>
+    private void OnCaptureCopyKey(ScreenCaptureWindow captureWindow)
+    {
+        // This capture's: one that has since ended, or been replaced, has nothing to copy.
+        if (!ReferenceEquals(captureWindow, _captureWindow)) return;
+        if (!captureWindow.SettleForCopy()) return;
+
+        if (_pendingCopy.Request(_toolbarWindow != null))
+            _toolbarWindow!.RequestCopyScreenshot();
     }
 
     // Puts the session's windows where the recovery watch says they belong. Called both when it

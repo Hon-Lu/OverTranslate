@@ -4,14 +4,13 @@ using NLog;
 namespace OverTranslate.Services;
 
 /// <summary>
-/// Catches Ctrl+C for 截圖 while Ctrl+C 複製截圖 is on and a selection is drawn (#445).
+/// Catches Ctrl+C for 截圖 while Ctrl+C 複製截圖 is on and a capture is up (#445).
 /// </summary>
 /// <remarks>
 /// <para>A low-level hook for the reason <see cref="AnnotationShortcutHook"/> is one: nothing in the
 /// capture session holds the keyboard focus, so no key handler in this process would ever see the
 /// key. A class of its own rather than a third key on that one, because the two live for different
-/// spans — that one as long as the 標記 panel, this one from the selection being finished to the
-/// capture ending — and sharing a hook would mean installing it for either and asking at every key
+/// spans — that one as long as the 標記 panel, this one as long as the capture —  and sharing a hook would mean installing it for either and asking at every key
 /// which of the two it is up for.</para>
 ///
 /// <para>On its own thread, as <see cref="GlobalEscapeHook"/> is, not the dispatcher's: it is up for
@@ -83,6 +82,7 @@ internal sealed class CaptureCopyKeyHook : IDisposable
     // would corrupt the hook chain.
     private readonly LowLevelKeyboardProc _proc;
     private readonly Action _onCopy;
+    private readonly Func<bool> _ready;
     private readonly HookThread _thread = new("OverTranslate capture copy key");
 
     // Touched only on the hook thread.
@@ -95,16 +95,22 @@ internal sealed class CaptureCopyKeyHook : IDisposable
     // lost that way costs nobody a C for long.
     private static readonly TimeSpan RetireLimit = TimeSpan.FromSeconds(2);
 
-    private CaptureCopyKeyHook(Action onCopy)
+    private CaptureCopyKeyHook(Func<bool> ready, Action onCopy)
     {
+        _ready = ready;
         _onCopy = onCopy;
         _proc = HookCallback;
     }
 
+    /// <param name="ready">
+    /// Asked on the hook thread, for a plain Ctrl+C only: whether there is a box to copy — see
+    /// <see cref="CaptureCopyKey.TakesCopy"/>. Has to answer from a value already published, never
+    /// by reaching into the interface.
+    /// </param>
     /// <param name="onCopy">Run on the dispatcher for each Ctrl+C taken.</param>
-    public static CaptureCopyKeyHook Install(Action onCopy)
+    public static CaptureCopyKeyHook Install(Func<bool> ready, Action onCopy)
     {
-        var hook = new CaptureCopyKeyHook(onCopy);
+        var hook = new CaptureCopyKeyHook(ready, onCopy);
         hook._thread.Start();
 
         // Invoke rather than BeginInvoke: switched on mid-capture, the key works from the moment
@@ -142,7 +148,8 @@ internal sealed class CaptureCopyKeyHook : IDisposable
             shift: IsDown(VK_SHIFT),
             alt: IsDown(VK_MENU),
             win: IsDown(VK_LWIN) || IsDown(VK_RWIN),
-            typing: down && TypingWindows.HaveForeground);
+            typing: down && TypingWindows.HaveForeground,
+            ready: _ready);
 
         if (_retiring)
         {

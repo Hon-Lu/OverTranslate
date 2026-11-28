@@ -16,21 +16,104 @@ public class CaptureCopyKeyTests
 
     private static CaptureCopyKeyVerdict Down(
         CaptureCopyKey keys, uint key = C, bool ctrl = true, bool shift = false, bool alt = false,
-        bool win = false, bool typing = false)
-        => keys.OnKey(key, down: true, ctrl, shift, alt, win, typing);
+        bool win = false, bool typing = false, bool ready = true)
+        => keys.OnKey(key, down: true, ctrl, shift, alt, win, typing, () => ready);
 
     private static CaptureCopyKeyVerdict Up(CaptureCopyKey keys, uint key = C, bool ctrl = true)
-        => keys.OnKey(key, down: false, ctrl, shift: false, alt: false, win: false, typing: false);
+        => keys.OnKey(key, down: false, ctrl, shift: false, alt: false, win: false, typing: false, () => true);
 
     // ── When to listen ──────────────────────────────────────────────────────
 
     [Theory]
     [InlineData(false, false, false)]
     [InlineData(false, true, false)]  // off: the default, nothing changes for anyone
-    [InlineData(true, false, false)]  // on, but no selection yet or still being dragged
+    [InlineData(true, false, false)]  // on, but no capture up
     [InlineData(true, true, true)]
-    public void ListensOnlyWithTheSwitchOnAndASelection(bool switchOn, bool hasSelection, bool expected)
-        => Assert.Equal(expected, CaptureCopyKey.ShouldListen(switchOn, hasSelection));
+    public void ListensOnlyWithTheSwitchOnAndACaptureUp(bool switchOn, bool captureUp, bool expected)
+        => Assert.Equal(expected, CaptureCopyKey.ShouldListen(switchOn, captureUp));
+
+    // ── Where the box stands (r2) ───────────────────────────────────────────
+
+    [Theory]
+    [InlineData((int)CaptureSelectionState.None, false)]              // nothing drawn yet
+    [InlineData((int)CaptureSelectionState.DraggingTooSmall, false)]  // a release now would keep nothing
+    [InlineData((int)CaptureSelectionState.DraggingReady, true)]      // settled where it is, then copied
+    [InlineData((int)CaptureSelectionState.Selected, true)]
+    [InlineData((int)CaptureSelectionState.Adjusting, true)]          // 編輯框選範圍: a handle being dragged
+    public void TakesCopy_OnlyWithABoxWorthKeeping(int state, bool expected)
+        => Assert.Equal(expected, CaptureCopyKey.TakesCopy((CaptureSelectionState)state));
+
+    [Theory]
+    [InlineData(0, 0, (int)CaptureSelectionState.DraggingTooSmall)]
+    [InlineData(3.9, 200, (int)CaptureSelectionState.DraggingTooSmall)]
+    [InlineData(200, 3.9, (int)CaptureSelectionState.DraggingTooSmall)]
+    [InlineData(4, 4, (int)CaptureSelectionState.DraggingReady)]       // the same 4 a release keeps
+    [InlineData(300, 120, (int)CaptureSelectionState.DraggingReady)]
+    public void WhileDragging_ReadyFromTheSizeARelease_Keeps(double w, double h, int expected)
+        => Assert.Equal((CaptureSelectionState)expected, CaptureCopyKey.WhileDragging(w, h));
+
+    [Fact]
+    public void NotReady_CtrlCPassesAndDoesNotUseUpTheCtrl()
+    {
+        var keys = new CaptureCopyKey();
+        Assert.Equal(CaptureCopyKeyVerdict.Pass, Down(keys, ready: false));
+        Assert.False(keys.HoldingTakenCopy);
+        Up(keys);
+        // the box became big enough under the same Ctrl: the next C is the screenshot
+        Assert.Equal(CaptureCopyKeyVerdict.Copy, Down(keys, ready: true));
+    }
+
+    [Fact]
+    public void TakenCopy_RepeatsStaySwallowedWhateverTheBoxSays()
+    {
+        var keys = new CaptureCopyKey();
+        Assert.Equal(CaptureCopyKeyVerdict.Copy, Down(keys));
+        Assert.Equal(CaptureCopyKeyVerdict.Swallow, Down(keys, ready: false));
+    }
+
+    [Fact]
+    public void ReadyIsAskedOnlyForAPlainCtrlC()
+    {
+        var keys = new CaptureCopyKey();
+        int asked = 0;
+        bool Ask() { asked++; return true; }
+        keys.OnKey(V, true, true, false, false, false, false, Ask);
+        keys.OnKey(C, true, true, true, false, false, false, Ask);   // Ctrl+Shift+C
+        keys.OnKey(C, true, false, false, false, false, false, Ask); // c
+        keys.OnKey(C, false, true, false, false, false, false, Ask); // C up
+        Assert.Equal(0, asked);
+        keys.OnKey(C, true, true, false, false, false, false, Ask);
+        Assert.Equal(1, asked);
+    }
+
+    // ── A copy waiting for the toolbar (r2) ─────────────────────────────────
+
+    [Fact]
+    public void PendingCopy_RunsAtOnceWithTheToolbarUp()
+    {
+        var pending = new PendingCaptureCopy();
+        Assert.True(pending.Request(toolbarUp: true));
+        Assert.False(pending.ToolbarReady());
+    }
+
+    [Fact]
+    public void PendingCopy_WaitsForTheToolbarAndRunsOnceOnly()
+    {
+        var pending = new PendingCaptureCopy();
+        Assert.False(pending.Request(toolbarUp: false));
+        Assert.False(pending.Request(toolbarUp: false)); // a second key before the toolbar: still one
+        Assert.True(pending.ToolbarReady());
+        Assert.False(pending.ToolbarReady());
+    }
+
+    [Fact]
+    public void PendingCopy_DoesNotOutliveTheCapture()
+    {
+        var pending = new PendingCaptureCopy();
+        pending.Request(toolbarUp: false);
+        pending.Clear();
+        Assert.False(pending.ToolbarReady());
+    }
 
     // ── Which keys ──────────────────────────────────────────────────────────
 
