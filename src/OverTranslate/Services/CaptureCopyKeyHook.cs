@@ -197,7 +197,7 @@ internal sealed class CaptureCopyKeyHook : IDisposable
             _hookId = IntPtr.Zero;
             // Paired with MainWindow's "listening": a Ctrl+C that stays taken after a capture would
             // show as one without the other.
-            Log.Info("Ctrl+C 複製截圖 hook removed{After}", _retiring ? " after Ctrl came up" : "");
+            Log.Info("Ctrl+C 複製截圖 hook removed{After:l}", _retiring ? " after Ctrl came up" : "");
         }
 
         System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvokeShutdown(
