@@ -40,15 +40,22 @@ public partial class ToolbarWindow
             () => LocalizationService.Get(CopiesTranslation() ? "S.Toolbar.CopyTranslation" : "S.Toolbar.CopyText"),
             () => LocalizationService.Get(CopiesTranslation() ? "S.Toolbar.CopyTranslationHint" : "S.Toolbar.CopyTextHint"));
         Labels.Add(AnnotateBtn, () => LocalizationService.Get("S.Toolbar.Annotate"));
+        // Ctrl+C on the card while Ctrl+C 複製截圖 is on (#445): the one place that says the key now
+        // takes a screenshot, so whoever turned it on and forgot is told where they are looking.
+        // Off, no line at all — not 未設定, which would offer a shortcut nobody asked for. Read at each
+        // showing, so the switch flipped in the menu is what the next card says.
         Labels.Add(CopyShotBtn,
             () => LocalizationService.Get("S.Toolbar.Screenshot"),
-            () => LocalizationService.Get("S.Toolbar.ScreenshotHint"));
+            () => LocalizationService.Get("S.Toolbar.ScreenshotHint"),
+            () => SettingsService.Instance.Current.Capture.CopyOnCtrlC ? CopyShortcutKeys : null);
         Labels.Add(OpenWindowBtn, () => LocalizationService.Get("S.Toolbar.OpenWindow"));
         Labels.Add(MoreBtn,
             () => LocalizationService.Get("S.Shell.Settings"),
             () => LocalizationService.Get("S.Toolbar.SettingsHint"));
         Labels.Add(CloseBtn, () => LocalizationService.Get("S.Toolbar.Close"));
     }
+
+    private static readonly string[] CopyShortcutKeys = ["Ctrl", "C"];
 
     private bool CopiesTranslation() =>
         ResolveCopyTextKind(_hasTranslated, _bubblesVisible) == CopyTextKind.Translation;

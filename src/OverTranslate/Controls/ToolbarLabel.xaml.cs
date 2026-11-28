@@ -61,7 +61,7 @@ public partial class ToolbarLabel : Popup
         FrameworkElement Element,
         Func<string> Name,
         Func<string?> Description,
-        Func<IReadOnlyList<string>>? Shortcut);
+        Func<IReadOnlyList<string>?>? Shortcut);
 
     public ToolbarLabel()
     {
@@ -121,13 +121,14 @@ public partial class ToolbarLabel : Popup
     /// <param name="shortcut">
     /// For a button that has a global shortcut: its keys, one per cap, or none when the shortcut is
     /// not set, which the card says in so many words. Null for a button that has no shortcut at all,
-    /// which gets no line for it.
+    /// which gets no line for it — and null from it for one whose shortcut is only there while a
+    /// switch says so, which gets no line while it is off.
     /// </param>
     public void Add(
         FrameworkElement element,
         Func<string> name,
         Func<string?>? description = null,
-        Func<IReadOnlyList<string>>? shortcut = null)
+        Func<IReadOnlyList<string>?>? shortcut = null)
     {
         element.ToolTip ??= string.Empty;
         element.ToolTipOpening += (_, e) => e.Handled = true;
