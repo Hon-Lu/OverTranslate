@@ -32,4 +32,23 @@ public class SettingsPageMarkupTests
             LanguageData.Providers.Select(item => $"{{DynamicResource {item.DisplayKey}}}"),
             rows);
     }
+
+    /// <summary>
+    /// Each card draws its service's mark through ProviderMark — the table the running capsule's
+    /// translation panel draws from too — and the right one.
+    /// </summary>
+    [Fact]
+    public void Each_service_row_draws_its_own_mark_from_the_shared_table()
+    {
+        var page = XDocument.Load(Path.Combine(
+            StringsParityTests.ProjectDirectory(), "Views", "Settings", "SettingsPage.xaml"));
+        XNamespace controls = "clr-namespace:OverTranslate.Controls";
+
+        var marks = page.Descendants(Presentation + "CheckBox")
+            .Where(e => (string?)e.Attribute("Style") == "{StaticResource ProviderCard}")
+            .Select(e => e.Descendants(controls + "ProviderMark").Select(m => (string?)m.Attribute("Provider")).SingleOrDefault())
+            .ToList();
+
+        Assert.Equal(LanguageData.Providers.Select(item => item.Provider.ToString()), marks);
+    }
 }
