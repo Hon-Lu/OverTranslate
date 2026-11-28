@@ -106,8 +106,8 @@ OverTranslate 目前提供了五種翻譯功能，可依不同使用情境快速
 
 ### 翻譯區塊 (框選)
 
-> 即時翻譯快捷鍵（預設 Ctrl + Alt + S）：未啟動時按下開始框選，框選時再按一次開始翻譯；翻譯進行中可暫停 / 繼續，  
-> 遇到不需要翻譯的畫面、或想直接看原文時可先暫停，之後再恢復，不必關閉即時翻譯。
+> 即時翻譯快捷鍵（預設 Ctrl + Alt + S）：未啟動時按下開始框選，框選時再按一次開始翻譯；翻譯進行中可暫停 / 繼續。  
+> 翻譯中可透過浮動視窗列切換翻譯服務與語言、調整模式與外觀，或隱藏譯文查看原畫面，不必關閉即時翻譯。
 
 以下依畫面類型展示：
 #### 字幕・漫畫
@@ -227,11 +227,11 @@ OverTranslate 目前提供了五種翻譯功能，可依不同使用情境快速
 
 ### 辨識語言（OCR）
 
-OCR 全程在本機執行，不會上傳圖片。中文、英文、日文已內建；其他語言第一次選擇時會詢問是否下載模型，之後可在設定頁的 **辨識模型** 管理。
+OCR 全程在本機執行，不會上傳圖片。中文、英文、日文、德文、西班牙文、法文、義大利文、葡萄牙文已內建；其他語言第一次選擇時會詢問是否下載模型，之後可在設定頁的 **辨識模型** 管理。
 
 | 辨識語言 | 模型 | 取得方式 |
 |----------|------|----------|
-| 中文（繁／簡）、英文、日文 | `PP-OCRv6_small_rec` | 內建 |
+| 中文（繁／簡）、英文、日文、德文、西班牙文、法文、義大利文、葡萄牙文 | `PP-OCRv6_small_rec` | 內建 |
 | 韓文 | `korean_PP-OCRv5_rec_mobile` | 下載（約 14 MB） |
 | 俄文、烏克蘭文 | `cyrillic_PP-OCRv5_rec_mobile` | 下載（約 8 MB） |
 | 日文直排（漫畫） | [comic-text-and-bubble-detector](https://huggingface.co/ogkalu/comic-text-and-bubble-detector)、[CRAFT](https://github.com/clovaai/CRAFT-pytorch)（MIT）、[manga-ocr-base-CPT-flex](https://huggingface.co/muscgab/manga-ocr-base-CPT-flex)（CC BY-NC-SA 4.0） | 下載（約 342 MB，需顯示卡） |

@@ -106,8 +106,8 @@ screen capture needs Windows 11 24H2 or later, window capture needs Windows 10 1
 
 ### Translation Blocks (area selection)
 
-> The real-time translation hotkey (default Ctrl + Alt + S) starts selecting blocks when it isn't running, and starts translating when pressed again during selection; while translating, it pauses / resumes,  
-> When a screen doesn't need translating, or when you want to read the original text, pause first and resume later — there's no need to shut down real-time translation.
+> The real-time translation hotkey (default Ctrl + Alt + S) starts selecting blocks when it isn't running, and starts translating when pressed again during selection; while translating, it pauses / resumes.  
+> While translating, the floating bar lets you switch the translation service and languages, adjust the mode and appearance, or hide the translation to see the original screen — there's no need to shut down real-time translation.
 
 Examples by screen type:
 #### Subtitles & Comics
@@ -225,11 +225,11 @@ Translates with an AI model that takes earlier translations into account, so nam
 
 ### Recognition languages (OCR)
 
-OCR runs entirely on your PC, and images are never uploaded. Chinese, English, and Japanese are built in; for any other language, you'll be asked whether to download its model the first time you pick it, and you can manage them later under **Recognition models** in Settings.
+OCR runs entirely on your PC, and images are never uploaded. Chinese, English, Japanese, German, Spanish, French, Italian, and Portuguese are built in; for any other language, you'll be asked whether to download its model the first time you pick it, and you can manage them later under **Recognition models** in Settings.
 
 | Language | Model | How to get it |
 |----------|-------|---------------|
-| Chinese (Traditional / Simplified), English, Japanese | `PP-OCRv6_small_rec` | Built in |
+| Chinese (Traditional / Simplified), English, Japanese, German, Spanish, French, Italian, Portuguese | `PP-OCRv6_small_rec` | Built in |
 | Korean | `korean_PP-OCRv5_rec_mobile` | Download (about 14 MB) |
 | Russian, Ukrainian | `cyrillic_PP-OCRv5_rec_mobile` | Download (about 8 MB) |
 | Vertical Japanese (manga) | [comic-text-and-bubble-detector](https://huggingface.co/ogkalu/comic-text-and-bubble-detector), [CRAFT](https://github.com/clovaai/CRAFT-pytorch) (MIT), [manga-ocr-base-CPT-flex](https://huggingface.co/muscgab/manga-ocr-base-CPT-flex) (CC BY-NC-SA 4.0) | Download (about 342 MB, requires a graphics card) |
