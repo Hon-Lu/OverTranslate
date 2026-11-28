@@ -143,6 +143,82 @@ public class RealtimeTranslationPanelTests(ITestOutputHelper output)
         }
     }
 
+    // The card asks over the whole panel, as 模式's cards do: the columns stay as they were under it
+    // and the panel keeps its size.
+    [Fact]
+    public void ThePackCard_ComesUpOverThePanel_WithoutWideningTheSourceColumn()
+    {
+        OnUiThread(() =>
+        {
+            var panel = Build("zh-Hant", TranslationProvider.Google, "JA", "ZH-HANT");
+            var chrome = Lay(panel);
+            var source = (FrameworkElement)panel.FindName("SourceColumn");
+            var (width, height, sourceWidth) = (chrome.ActualWidth, chrome.ActualHeight, source.ActualWidth);
+
+            panel.PutUpCard(StandIn());
+            Lay(panel);
+
+            var layer = (FrameworkElement)panel.FindName("PackLayer");
+            Assert.True(panel.IsPackCardShown);
+            Assert.Equal(width, chrome.ActualWidth, 1);
+            Assert.Equal(height, chrome.ActualHeight, 1);
+            Assert.Equal(sourceWidth, source.ActualWidth, 1);
+            Assert.Equal(Visibility.Visible, ((FrameworkElement)panel.FindName("SourceScroll")).Visibility);
+            // The scrim covers the whole inside of the chrome: search box and all three columns.
+            Assert.Equal(chrome.ActualWidth - 2, layer.ActualWidth, 1);
+            Assert.Equal(chrome.ActualHeight - 2, layer.ActualHeight, 1);
+            panel.Close();
+        });
+    }
+
+    // The card's own 取消 is the card's (OcrLanguagePackCard, needs the app's styles); the layer's
+    // two ways out are the panel's.
+    [Fact]
+    public void ThePackCard_IsPutAwayByAPressOnTheScrim_AndByEsc()
+    {
+        OnUiThread(() =>
+        {
+            var panel = Build("zh-Hant", TranslationProvider.Google, "JA", "ZH-HANT");
+            Lay(panel);
+            var layer = (FrameworkElement)panel.FindName("PackLayer");
+            var card = (FrameworkElement)panel.FindName("PackCard");
+
+            // A press on the card itself is not one on the scrim.
+            panel.PutUpCard(StandIn());
+            card.RaiseEvent(LeftPress());
+            Assert.True(panel.IsPackCardShown);
+            layer.RaiseEvent(LeftPress());
+            Assert.False(panel.IsPackCardShown);
+
+            // Esc puts the card away and leaves the panel up; the rows under the scrim take no keys.
+            panel.PutUpCard(StandIn());
+            Assert.True(panel.HandleKey(System.Windows.Input.Key.Down));
+            Assert.True(panel.HandleKey(System.Windows.Input.Key.Enter));
+            Assert.True(panel.IsPackCardShown);
+            Assert.True(panel.HandleKey(System.Windows.Input.Key.Escape));
+            Assert.False(panel.IsPackCardShown);
+            panel.Close();
+        });
+    }
+
+    // The language pack card's size: 264 wide, about 130 tall.
+    private static FrameworkElement StandIn() => new Border { Width = 264, Height = 130 };
+
+    private static System.Windows.Input.MouseButtonEventArgs LeftPress() =>
+        new(System.Windows.Input.Mouse.PrimaryDevice, 0, System.Windows.Input.MouseButton.Left)
+        {
+            RoutedEvent = UIElement.MouseLeftButtonDownEvent
+        };
+
+    private static Border Lay(Window panel)
+    {
+        var root = (FrameworkElement)panel.Content;
+        root.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        root.Arrange(new Rect(root.DesiredSize));
+        root.UpdateLayout();
+        return (Border)panel.FindName("Chrome");
+    }
+
     // The row's content is tick, then the pack hint when there is one, then the label.
     private static FrameworkElement? PackHintOf(System.Windows.Controls.Button row) =>
         ((DockPanel)row.Content).Children.OfType<FrameworkElement>()

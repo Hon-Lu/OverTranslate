@@ -63,6 +63,18 @@
             <Setter Property="Padding" Value="4"/>
         </Style>
 
+        <!-- The card over the scrim: 模式's PanelCard, centred. The language pack card is only its
+             contents, so this is its one frame. -->
+        <Style x:Key="PanelCard" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource ToolbarBg}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ToolbarMenuBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="14,12"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
         <Style x:Key="ColumnHeader" TargetType="TextBlock">
             <Setter Property="Height" Value="26"/>
             <Setter Property="Padding" Value="10,6,10,4"/>
@@ -164,9 +176,9 @@
                     BorderBrush="{DynamicResource ToolbarMenuBorder}"
                     BorderThickness="1"
                     CornerRadius="14"
-                    Padding="8,4,8,8"
                     RenderOptions.ClearTypeHint="Enabled">
-                <StackPanel>
+                <Grid>
+                <StackPanel Margin="8,4,8,8">
                     <!-- One box for both language columns: either may be the one to find a name in,
                          and two boxes would be two places to type the same thing. -->
                     <Grid Height="40">
@@ -204,12 +216,6 @@
                                         <StackPanel x:Name="SourceRows"/>
                                     </ScrollViewer>
                                     <TextBlock x:Name="SourceNoMatch" Style="{StaticResource NoMatchText}"/>
-                                    <!-- In place of the list, once a language still to be downloaded is picked. -->
-                                    <ContentControl x:Name="CardHost"
-                                                    Margin="6,4"
-                                                    VerticalAlignment="Top"
-                                                    Focusable="False"
-                                                    Visibility="Collapsed"/>
                                 </Grid>
                             </DockPanel>
                         </Border>
@@ -230,6 +236,19 @@
                         </Border>
                     </Grid>
                 </StackPanel>
+
+                <!-- A language still to be downloaded asks over the whole panel, as 模式's cards do:
+                     the same scrim, and a press on it puts the card away. The panel keeps its size.
+                     Rounded with the chrome's inside corner, so the scrim does not show past it. -->
+                <Border x:Name="PackLayer" Visibility="Collapsed"
+                        Background="#8C000000" CornerRadius="13"
+                        MouseLeftButtonDown="PackScrim_MouseLeftButtonDown">
+                    <Border x:Name="PackCard" Style="{StaticResource PanelCard}"
+                            MouseLeftButtonDown="PackCard_MouseLeftButtonDown">
+                        <ContentControl x:Name="CardHost" Focusable="False"/>
+                    </Border>
+                </Border>
+                </Grid>
             </Border>
         </Grid>
     </Border>

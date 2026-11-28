@@ -74,9 +74,6 @@ internal partial class RealtimeTranslationPanel : Window
     // Set while the search box holds the keyboard.
     private bool _typing;
 
-    // The source column's width with its list in it, while a language pack card stands in for the list.
-    private double _sourceListWidth = double.NaN;
-
     // For the log only (#358).
     private readonly System.Diagnostics.Stopwatch _age = System.Diagnostics.Stopwatch.StartNew();
     private string _closeReason = "closed without Dismiss";
@@ -459,27 +456,44 @@ internal partial class RealtimeTranslationPanel : Window
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
-        switch (e.Key)
+        if (HandleKey(e.Key)) e.Handled = true;
+    }
+
+    /// <returns>Whether the key was the panel's.</returns>
+    internal bool HandleKey(Key key)
+    {
+        // While the card is up it is the one thing answered: Esc puts it away, a second Esc closes
+        // the panel, and the rows under the scrim take no keys.
+        if (IsPackCardShown)
+        {
+            if (key == Key.Escape)
+            {
+                Log.Info("Realtime translation panel: language pack card put away (Esc)");
+                HidePackCard();
+            }
+            return key is Key.Escape or Key.Enter or Key.Up or Key.Down;
+        }
+
+        switch (key)
         {
             case Key.Escape:
-                e.Handled = true;
                 Dismiss(giveBackForeground: true, "Esc");
-                break;
+                return true;
 
             case Key.Enter:
                 // A row picks itself on Enter; the search box picks nothing — there is no highlighted
                 // match until the user arrows onto one.
-                e.Handled = true;
                 if (Keyboard.FocusedElement is Button { Tag: not null } row) row.RaiseEvent(new RoutedEventArgs(Button.ClickEvent, row));
-                break;
+                return true;
 
             case Key.Down:
-                e.Handled = MoveFocus(+1);
-                break;
+                return MoveFocus(+1);
 
             case Key.Up:
-                e.Handled = MoveFocus(-1) || SearchBox.Focus();
-                break;
+                return MoveFocus(-1) || SearchBox.Focus();
+
+            default:
+                return false;
         }
     }
 
@@ -539,9 +553,9 @@ internal partial class RealtimeTranslationPanel : Window
     }
 
     /// <summary>
-    /// The language pack card, in the source column in place of its list: in this window, which is
-    /// already out of the capture and in the session's re-assert, and already takes the mouse without
-    /// the foreground. The other two columns stay as they were.
+    /// The language pack card, on a layer over the whole panel as 模式's cards are: in this window,
+    /// which is already out of the capture and in the session's re-assert, and already takes the
+    /// mouse without the foreground. The panel keeps its size; the columns stay as they were under it.
     /// </summary>
     private void ShowPackCard(RealtimeLanguageEntry entry)
     {
@@ -555,27 +569,41 @@ internal partial class RealtimeTranslationPanel : Window
         if (entry.Language.Pack is { IsDownloading: true })
             PackDownloadRequested?.Invoke(this, entry.Code);
 
-        if (double.IsNaN(_sourceListWidth)) _sourceListWidth = SourceColumn.Width;
-        SourceColumn.Width = Math.Max(_sourceListWidth, card.Width + CardHost.Margin.Left + CardHost.Margin.Right + SourceColumn.Padding.Left + SourceColumn.Padding.Right);
-
-        SourceScroll.Visibility = Visibility.Collapsed;
-        SourceNoMatch.Visibility = Visibility.Collapsed;
-        CardHost.Content = card;
-        CardHost.Visibility = Visibility.Visible;
-
+        PutUpCard(card);
         Log.Info("Realtime translation panel: language pack card for {Code}", entry.Code);
     }
 
+    /// <summary>Puts <paramref name="card"/> up on the layer over the panel.</summary>
+    internal void PutUpCard(FrameworkElement card)
+    {
+        CardHost.Content = card;
+        PackLayer.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>Whether the language pack card is up over the panel.</summary>
+    internal bool IsPackCardShown => PackLayer.Visibility == Visibility.Visible;
+
+    /// <summary>
+    /// Puts the card away. A download already started goes on: the capsule is watching it and
+    /// switches to the language when it lands; only the card's own 取消 stops it.
+    /// </summary>
     private void HidePackCard()
     {
-        if (_closing || CardHost.Visibility != Visibility.Visible) return;
+        if (_closing || PackLayer.Visibility != Visibility.Visible) return;
 
         CardHost.Content = null;
-        CardHost.Visibility = Visibility.Collapsed;
-        SourceScroll.Visibility = Visibility.Visible;
-        if (!double.IsNaN(_sourceListWidth)) SourceColumn.Width = _sourceListWidth;
-        Filter(_sourceRows, SourceNoMatch, SourceScroll, SearchBox.Text);
+        PackLayer.Visibility = Visibility.Collapsed;
     }
+
+    private void PackScrim_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        Log.Info("Realtime translation panel: language pack card put away (press on the scrim)");
+        HidePackCard();
+    }
+
+    // Presses inside the card must not reach the scrim behind it.
+    private void PackCard_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) => e.Handled = true;
 
     private void PickProvider(RealtimeProviderEntry entry)
     {
