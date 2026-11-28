@@ -1390,6 +1390,35 @@
                                         <ContentControl x:Name="RealtimeCompareElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
                                     </StackPanel>
                                 </Border>
+                                <Border Style="{StaticResource HotkeyRow}">
+                                    <StackPanel>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="{StaticResource HotkeyBoxWidth}"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Style="{StaticResource HotkeyRowText}">
+                                                <TextBlock Text="{DynamicResource S.Settings.RealtimeHideHotkey}"
+                                                           Style="{StaticResource OptionTitle}"/>
+                                                <TextBlock Text="{DynamicResource S.Settings.RealtimeHideHotkeyNote}"
+                                                           Style="{StaticResource OptionDescription}"/>
+                                            </StackPanel>
+                                            <TextBox Grid.Column="3" x:Name="RealtimeHideHotkeyBox"
+                                                     Style="{StaticResource HotkeyBox}"
+                                                     PreviewMouseLeftButtonDown="HotkeyBox_PreviewMouseLeftButtonDown"
+                                                     PreviewKeyDown="HotkeyBox_PreviewKeyDown"
+                                                     PreviewKeyUp="HotkeyBox_PreviewKeyUp"
+                                                     GotFocus="HotkeyBox_GotFocus"
+                                                     LostFocus="HotkeyBox_LostFocus"/>
+                                            <Button Grid.Column="3" x:Name="RealtimeHideHotkeyClearBtn"
+                                                    Style="{StaticResource HotkeyClearButton}"
+                                                    Click="HotkeyClear_Click"/>
+                                        </Grid>
+                                        <ContentControl x:Name="RealtimeHideElevatedNote" Style="{StaticResource HotkeyElevatedNote}"/>
+                                    </StackPanel>
+                                </Border>
                             </ctl:AttachedRows>
 
                             <!-- 取詞翻譯. The only feature besides 替換翻譯 with no way in but a shortcut and

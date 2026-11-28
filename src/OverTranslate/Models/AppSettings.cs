@@ -164,7 +164,7 @@ public class AppSettings
     /// find. Nobody else is handed a combination they never asked for.
     ///
     /// Registered only while a session is up, not from startup — see
-    /// <c>MainWindow.SyncRealtimeCompareHotkey</c>. Outside a session it would do nothing, and a
+    /// <c>MainWindow.SyncSessionHotkey</c>. Outside a session it would do nothing, and a
     /// registered combination is taken from every other application for as long as it is held.
     /// </remarks>
     public uint RealtimeCompareHotkeyModifiers { get; set; }
@@ -179,6 +179,27 @@ public class AppSettings
 
     /// <inheritdoc cref="TranslationWindowHotkeyEnabled"/>
     public bool RealtimeCompareHotkeyEnabled { get; set; }
+
+    /// <summary>
+    /// Hides and shows a running realtime session's translations without stopping the session.
+    /// Not set by default.
+    /// </summary>
+    /// <remarks>
+    /// Unset and held only while a session is up, for the reasons given on
+    /// <see cref="RealtimeCompareHotkeyModifiers"/>; see <c>MainWindow.SyncSessionHotkey</c>.
+    /// </remarks>
+    public uint RealtimeHideHotkeyModifiers { get; set; }
+
+    /// <inheritdoc cref="RealtimeHideHotkeyModifiers"/>
+    public uint RealtimeHideHotkeyVirtualKey { get; set; }
+
+    /// <inheritdoc cref="RealtimeHideHotkeyModifiers"/>
+    public string RealtimeHideHotkeyDisplay { get; set; } = "";
+    public ShortcutInputKind RealtimeHideHotkeyInputKind { get; set; } = ShortcutInputKind.Keyboard;
+    public GamepadShortcutButton RealtimeHideHotkeyGamepadButton { get; set; } = GamepadShortcutButton.None;
+
+    /// <inheritdoc cref="TranslationWindowHotkeyEnabled"/>
+    public bool RealtimeHideHotkeyEnabled { get; set; }
 
     public string SourceLanguage { get; set; } = LanguageData.DefaultOcrSourceLanguage;
     public string TargetLanguage { get; set; } = "ZH-HANT";

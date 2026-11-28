@@ -169,6 +169,8 @@ public partial class RealtimeBlockWindow : Window
     private double _dpiX = 1.0;
     private double _dpiY = 1.0;
     private bool _isLoaded;
+    // 隱藏譯文: the words and their backgrounds withheld — see SetTranslationHidden.
+    private bool _translationHidden;
 
     // Published by Rebuild on the dispatcher and read by the refresh loop on its own thread, so it is
     // replaced wholesale rather than mutated. The generation beside it is what a finished batch of
@@ -378,6 +380,37 @@ public partial class RealtimeBlockWindow : Window
         Marker.Opacity = selected ? 1 : 0.5;
         Marker.BorderThickness = new Thickness(selected ? 2 : 1);
         Marker.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>
+    /// Takes the translation and its background off the screen, or puts them back (隱藏譯文). The
+    /// lines go on arriving and being laid out while hidden, so showing them again is immediate and
+    /// shows the latest ones — see <see cref="Services.Realtime.RealtimeTranslationHiding"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>The two canvases, not the window. Hiding the window would take it off the capture's
+    /// exclusion list, and a change to that list costs the session the frame it was about to read,
+    /// once on the way out and once on the way back (see RefreshOverlayHandles). The handle stays
+    /// visible and empty to the eye; to the capture nothing has changed.</para>
+    ///
+    /// <para>Hidden rather than Collapsed: the elements keep their layout, so the coverage the
+    /// window-capture path measures from them (ApplyCovers) is the same as when they show. The
+    /// marker stays: it is only up while the 模式 panel is open, and that panel is the user asking to
+    /// see where the blocks are.</para>
+    ///
+    /// <para>The background repair is the one thing that stops: it re-reads the picture under each
+    /// patch to keep it current, and a patch nobody can see does not need to be current. It starts
+    /// again on the way back and catches up on its first pass.</para>
+    /// </remarks>
+    public void SetTranslationHidden(bool hidden)
+    {
+        if (_translationHidden == hidden) return;
+        _translationHidden = hidden;
+
+        var visibility = hidden ? Visibility.Hidden : Visibility.Visible;
+        ScrimCanvas.Visibility = visibility;
+        TextCanvas.Visibility = visibility;
+        UpdateNaturalRefreshTimer();
     }
 
     public void SetLines(IReadOnlyList<TranslatedBlock> lines)
@@ -2092,7 +2125,9 @@ public partial class RealtimeBlockWindow : Window
     {
         // Never runs with the switch off: the patches it would refresh are only recorded when the
         // repair is what drew them.
-        if (!_naturalBackground || !_isLoaded || Volatile.Read(ref _naturalPatches).Length == 0)
+        // Nor while hidden — see SetTranslationHidden.
+        if (!_naturalBackground || !_isLoaded || _translationHidden ||
+            Volatile.Read(ref _naturalPatches).Length == 0)
             StopNaturalRefresh();
         else
             StartNaturalRefresh();

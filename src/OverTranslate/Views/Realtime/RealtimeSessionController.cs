@@ -111,6 +111,10 @@ internal sealed class RealtimeSessionController
     // Held here as well because the press has to reach whichever layers are up at the time.
     private bool _compareDisplay;
 
+    // 隱藏譯文, for this sitting only: the words withheld from the screen while the session goes on
+    // reading. Every block window built while it holds is built hidden — see ShowBlockWindows.
+    private readonly RealtimeTranslationHiding _hiding = new();
+
     // UI updates are dispatched asynchronously. Carrying the session's generation here prevents an
     // update queued before a pause from restoring text after the screen was cleared.
     private int _visibleGeneration;
@@ -517,6 +521,7 @@ internal sealed class RealtimeSessionController
         // second inference runtime could be built by accident.
         _session = new RealtimeTranslationSession(AppServices.Ocr, AppServices.Translation);
         Volatile.Write(ref _visibleGeneration, 0);
+        _hiding.Reset();
         _session.RegionUpdated += OnRegionUpdated;
         _session.Failed += OnSessionFailed;
         _session.FailureChanged += OnFailureChanged;
@@ -527,6 +532,7 @@ internal sealed class RealtimeSessionController
         control.EditRequested += (_, _) => EnterEditMode();
         control.CloseRequested += (_, _) => Stop();
         control.PauseToggleRequested += (_, _) => TogglePause();
+        control.HideToggleRequested += (_, _) => ToggleTranslationHidden();
         // Handed on rather than acted on here: standing this session down is only half of a capture,
         // and the half that owns the screen afterwards belongs to MainWindow. The button is on the
         // running capsule only, which is the one state a capture is allowed in anyway.
@@ -1028,6 +1034,31 @@ internal sealed class RealtimeSessionController
     }
 
     /// <summary>
+    /// Takes the translations off the screen or puts them back, with the session reading on
+    /// regardless — see <see cref="RealtimeTranslationHiding"/>.
+    /// </summary>
+    /// <remarks>
+    /// Independent of 暫停: a paused session hidden and then resumed goes on reading unseen, and the
+    /// bar names whichever of the two the user has to undo first (RealtimeRunStatusRule).
+    /// </remarks>
+    /// <returns>Whether there was a running session to act on.</returns>
+    public bool ToggleTranslationHidden()
+    {
+        if (_control is not { } control) return false;
+        if (!_hiding.Toggle(IsTranslating, _interlude.HideLayers)) return false;
+
+        foreach (var window in _blockWindows.Values)
+            window.SetTranslationHidden(_hiding.Hidden);
+        control.SetTranslationHidden(_hiding.Hidden);
+
+        Log.Info("Realtime translations {State}; the session reads on", _hiding.Hidden ? "hidden" : "shown");
+        return true;
+    }
+
+    /// <summary>The 隱藏譯文 shortcut: the button, pressed from wherever the user is.</summary>
+    public void ToggleTranslationHiddenFromShortcut() => ToggleTranslationHidden();
+
+    /// <summary>
     /// Sends the running capsule's 截圖翻譯 press on to the one place that owns a capture.
     /// </summary>
     /// <remarks>
@@ -1195,6 +1226,8 @@ internal sealed class RealtimeSessionController
         // A session can be ended from the tray while a capture stands on it. The windows this was
         // about are gone with it, so the capture's teardown has nothing left to give back.
         _interlude = default;
+        // Not kept for the next sitting: see RealtimeTranslationHiding.
+        _hiding.Reset();
 
         RestoreShell();
         ReleaseInBackground(capture);
@@ -1215,6 +1248,9 @@ internal sealed class RealtimeSessionController
         // Before the block windows go: a backend built around a set of overlays is only valid while
         // those overlays are the ones on screen, and edit mode is where the user changes them.
         _session?.Stop();
+        // Framing has to show the blocks, and the words come back with the next start.
+        _hiding.Reset();
+        control.SetTranslationHidden(false);
         // Released once this has returned — the framing layer is about to go up and must not wait on it.
         // StartTranslating builds a new backend of its own, so the old one going at its own pace
         // shares nothing with what comes next.
@@ -1432,6 +1468,9 @@ internal sealed class RealtimeSessionController
                 region.Profile.Layout, look.Border, look.BorderColor, region.Orientation,
                 compared ? copies![region.Id] : null, compared ? block.CompareScale : 1.0,
                 look.FixedFontSize, region.Profile.Align);
+            // Before it is shown, so a block built again while hidden (a language change, 原文對照)
+            // never draws for a frame.
+            window.SetTranslationHidden(_hiding.Hidden);
             _blockWindows[region.Id] = window;
             window.Show();
         }

@@ -967,6 +967,16 @@ public class SettingsParsingTests
         Assert.Equal("", settings.RealtimeCompareHotkeyDisplay);
     }
 
+    // 隱藏譯文's shortcut likewise arrives unset.
+    [Fact]
+    public void MissingHideHotkey_StaysUnset()
+    {
+        var settings = SettingsService.Parse("""{"Theme":"Light"}""");
+
+        Assert.False(settings.RealtimeHideHotkeyEnabled);
+        Assert.Equal("", settings.RealtimeHideHotkeyDisplay);
+    }
+
     // Ctrl+Alt+S belonged to block framing until that shortcut was removed. A file written while it
     // did says nothing about 暫停 / 繼續, so that one arrives on its new default rather than on the
     // Ctrl+Alt+Q it used to have — and a user who had recorded their own keeps theirs.

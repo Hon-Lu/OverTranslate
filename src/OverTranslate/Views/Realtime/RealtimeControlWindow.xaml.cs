@@ -118,6 +118,8 @@ public partial class RealtimeControlWindow : Window
     // bar lasts for one sitting, and so does this.
     private int _profileBlock;
     private bool _isPaused;
+    // 隱藏譯文, as the session last reported it through SetTranslationHidden.
+    private bool _translationHidden;
     private bool _isLoadingModels;
     // What the session last said through SetBusy; the dot also pulses while the models load.
     private bool _busy;
@@ -176,6 +178,7 @@ public partial class RealtimeControlWindow : Window
 
         _screenBounds = screenBounds;
         ApplyPauseButton();
+        ApplyHideButton();
         ApplyCrosshairButton();
         ApplyCollapsed();
         RestoreText();
@@ -243,6 +246,12 @@ public partial class RealtimeControlWindow : Window
     public event EventHandler? EditRequested;
     public event EventHandler? CloseRequested;
     public event EventHandler? PauseToggleRequested;
+
+    /// <summary>
+    /// Raised when 隱藏譯文 is pressed. The session decides and reports the state back through
+    /// <see cref="SetTranslationHidden"/>: the shortcut reaches the same switch without this bar.
+    /// </summary>
+    public event EventHandler? HideToggleRequested;
 
     /// <summary>
     /// Raised when the user asks for 截圖翻譯 from the running capsule. The session is not this
@@ -507,6 +516,37 @@ public partial class RealtimeControlWindow : Window
     /// means; the button says what pressing it would do. A pause that only greyed the dot was read
     /// as the session having died.
     /// </remarks>
+    /// <summary>
+    /// Shows 隱藏譯文 as on or off. The button held down is the whole of it: no words beside the
+    /// pair, which the held-down eye already says, and the dot keeps the accent — the session is still
+    /// reading, which is the difference from 已暫停's grey.
+    /// </summary>
+    public void SetTranslationHidden(bool hidden)
+    {
+        _translationHidden = hidden;
+        ApplyHideButton();
+    }
+
+    private void ApplyHideButton()
+    {
+        // 原文對照's held-down look: see SetCompareDisplay.
+        if (_translationHidden)
+        {
+            HideBtn.SetResourceReference(ForegroundProperty, "AppAccent");
+            HideBtn.SetResourceReference(BackgroundProperty, "ToolbarGroupBg");
+        }
+        else
+        {
+            HideBtn.ClearValue(ForegroundProperty);
+            HideBtn.ClearValue(BackgroundProperty);
+        }
+
+        var label = LocalizationService.Get(
+            _translationHidden ? "S.Realtime.ShowTranslation" : "S.Realtime.HideTranslation");
+        HideBtn.ToolTip = label;
+        System.Windows.Automation.AutomationProperties.SetName(HideBtn, label);
+    }
+
     public void SetPaused(bool paused)
     {
         _isPaused = paused;
@@ -550,6 +590,8 @@ public partial class RealtimeControlWindow : Window
         // is a paused one. Going back to edit mode from a paused session is the case this covers.
         _isPaused = false;
         ApplyPauseButton();
+        _translationHidden = false;
+        ApplyHideButton();
 
         // Every trip into edit mode starts with the crosshair, whatever the last one ended on: the
         // layer is rebuilt each time, so it opens taking the mouse, and the user pressed 編輯
@@ -810,14 +852,20 @@ public partial class RealtimeControlWindow : Window
         _failureShowing = false;
         EditHintText.Text = _crosshairEnabled ? EditHint : CrosshairOffHint;
 
-        RunStatusText.Text = _isPaused ? PausedStatus : _isLoadingModels ? LoadingModelsStatus : RunStatus;
+        var status = RealtimeRunStatusRule.For(_isPaused, _isLoadingModels);
+        RunStatusText.Text = status switch
+        {
+            RealtimeRunStatus.Paused => PausedStatus,
+            RealtimeRunStatus.LoadingModels => LoadingModelsStatus,
+            _ => RunStatus,
+        };
 
         // Paused, the pair stays beside 已暫停 rather than giving way to it: the pair is the one place
         // the languages can be changed from (#345), and a paused session is where someone who noticed
         // the wrong one is most likely to stop and fix it before carrying on.
         var showPair = _hasLanguages && !_isLoadingModels;
         LangPairPanel.Visibility = showPair ? Visibility.Visible : Visibility.Collapsed;
-        RunStatusText.Visibility = showPair && !_isPaused ? Visibility.Collapsed : Visibility.Visible;
+        RunStatusText.Visibility = showPair && status != RealtimeRunStatus.Paused ? Visibility.Collapsed : Visibility.Visible;
 
         // Red still, for a failure that was clicked away: it is set aside, not over.
         SetDotState(failed: failing);
@@ -1493,6 +1541,8 @@ public partial class RealtimeControlWindow : Window
     private void EditBtn_Click(object sender, RoutedEventArgs e) => EditRequested?.Invoke(this, EventArgs.Empty);
 
     private void PauseBtn_Click(object sender, RoutedEventArgs e) => PauseToggleRequested?.Invoke(this, EventArgs.Empty);
+
+    private void HideBtn_Click(object sender, RoutedEventArgs e) => HideToggleRequested?.Invoke(this, EventArgs.Empty);
 
     private void CaptureBtn_Click(object sender, RoutedEventArgs e) => CaptureRequested?.Invoke(this, EventArgs.Empty);
 
