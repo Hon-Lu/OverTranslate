@@ -190,6 +190,7 @@ public partial class RealtimePage : UserControl
 
         RealtimeSessionController.Instance.StateChanged += OnSessionStateChanged;
         RealtimeSessionController.Instance.LanguagesChanged += OnSessionLanguagesChanged;
+        RealtimeSessionController.Instance.ProviderChanged += OnSessionProviderChanged;
         RealtimeSessionController.Instance.AppearanceChanged += OnSessionAppearanceChanged;
 
         // The direction is set on the edit layer, which says so through MangaModelOptions.
@@ -301,8 +302,8 @@ public partial class RealtimePage : UserControl
         var target   = TgtLangBox.SelectedValue;
         var provider = ProviderBox.SelectedValue;
 
-        // The same list the running capsule's source menu offers — see RealtimeLanguageMenuItems.
-        LocalizationService.BindLocalizedItems(SrcLangBox, RealtimeLanguageMenuItems.SourceLanguages.ToList());
+        // The same list the running capsule's translation panel offers — see RealtimeTranslationPanelItems.
+        LocalizationService.BindLocalizedItems(SrcLangBox, RealtimeTranslationPanelItems.SourceLanguages.ToList());
         LocalizationService.BindLocalizedItems(TgtLangBox,  LanguageData.TargetLanguages);
         // Also where a change to which services are offered lands, on the way back from the settings
         // page. A running session has this box locked, and keeps its own choice in the list anyway.
@@ -362,6 +363,7 @@ public partial class RealtimePage : UserControl
     {
         RealtimeSessionController.Instance.StateChanged -= OnSessionStateChanged;
         RealtimeSessionController.Instance.LanguagesChanged -= OnSessionLanguagesChanged;
+        RealtimeSessionController.Instance.ProviderChanged -= OnSessionProviderChanged;
         RealtimeSessionController.Instance.AppearanceChanged -= OnSessionAppearanceChanged;
         // A static event: left attached, it would keep this page and the closed window around it alive.
         MangaModelOptions.Changed -= OnMangaModelOptionsChanged;
@@ -1174,6 +1176,19 @@ public partial class RealtimePage : UserControl
             var realtime = SettingsService.Instance.Current.Realtime;
             SrcLangBox.SelectedValue = LanguageData.GetValidRealtimeSourceCode(realtime.SourceLanguage);
             TgtLangBox.SelectedValue = LanguageData.GetValidTargetCode(realtime.TargetLanguage);
+        });
+
+    /// <summary>
+    /// The running capsule changed the service: the picker follows, as it does for the pair. The list
+    /// is bound again around the new choice, so a hidden service the session has just left goes out
+    /// of it the way it would have had the user picked away from it here.
+    /// </summary>
+    private void OnSessionProviderChanged(object? sender, EventArgs e) =>
+        Dispatcher.BeginInvoke(() =>
+        {
+            ProviderBox.SelectedValue = SettingsService.Instance.Current.Realtime.Provider;
+            BindPickers();
+            RenderProviderHint();
         });
 
     private void RenderState()

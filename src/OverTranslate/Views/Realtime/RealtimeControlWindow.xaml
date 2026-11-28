@@ -28,13 +28,13 @@
              it is shown in, so the stroke is set directly: 1.05 here is 1.4 at 24. 18 rather than
              the bar's usual 16 because the 文 has too much detail to survive 16; the button itself is
              the same size as the others. -->
-        <!-- One half of the language pair, as a button that drops its list (#345). Flat until the
-             pointer is on it, then the tray's grey; one step lighter while its list is open (Tag
-             "Open", set in code), so the list reads as coming out of this one. AppBorder is that step
-             in both themes: #3C3C3C over #363636 here, #E0E0E0 under #EDEDED in the light one. Not
-             focusable: the capsule never takes the keyboard, and a focus ring it could never use
-             would only show up after a click. -->
-        <Style x:Key="RealtimeLangButton" TargetType="Button">
+        <!-- The translation button: the dot, the service's mark and the language pair as one control
+             that opens the translation panel. Flat until the pointer is on it, then the tray's grey;
+             pressed, one step further; while its panel is open (Tag "Open", set in code), AppBorder,
+             so the panel reads as coming out of it — #3C3C3C over #363636 here, #E0E0E0 under #EDEDED
+             in the light one, as the pair's two buttons had (#345). Not focusable: the capsule never
+             takes the keyboard, and a focus ring it could never use would only show up after a click. -->
+        <Style x:Key="RealtimeTranslationButton" TargetType="Button">
             <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
             <Setter Property="Focusable" Value="False"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
@@ -43,8 +43,9 @@
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Root"
                                 Background="Transparent"
-                                CornerRadius="7"
-                                Padding="6,3">
+                                CornerRadius="8"
+                                Height="26"
+                                Padding="6,0">
                             <ContentPresenter VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -54,29 +55,32 @@
                             <Trigger Property="Tag" Value="Open">
                                 <Setter TargetName="Root" Property="Background" Value="{DynamicResource AppBorder}"/>
                             </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource ToolbarGroupHoverBg}"/>
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
 
-        <!-- The source steps back to secondary like the label it replaces, and comes up to primary
-             while it is the thing being pointed at or chosen — see the pair's comment below. -->
-        <Style x:Key="RealtimeSourceLangButton" TargetType="Button" BasedOn="{StaticResource RealtimeLangButton}">
+        <!-- The source steps back to secondary, and comes up to primary while the button is the thing
+             being pointed at or its panel is open — see the pair's comment below. -->
+        <Style x:Key="RealtimeSourceLangText" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}"/>
             <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
+                <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}" Value="True">
                     <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
-                </Trigger>
-                <Trigger Property="Tag" Value="Open">
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource AncestorType=Button}}" Value="Open">
                     <Setter Property="Foreground" Value="{DynamicResource AppTextPrimary}"/>
-                </Trigger>
+                </DataTrigger>
             </Style.Triggers>
         </Style>
 
-        <!-- The ⌄ after each name. Drawn for the arrow's reason: the font's chevron is a different
-             weight on Windows 10, and a Path has no fallback to lose. Dimmed so it marks the name as
-             pressable without competing with it. -->
+        <!-- The ⌄ at the end of the translation button. Drawn for the arrow's reason: the font's
+             chevron is a different weight on Windows 10, and a Path has no fallback to lose. Dimmed so
+             it marks the button as opening something without competing with the names. -->
         <Style x:Key="RealtimeLangChevron" TargetType="Path">
             <Setter Property="Width" Value="8"/>
             <Setter Property="Height" Value="8"/>
@@ -322,106 +326,110 @@
                                 Orientation="Horizontal"
                                 VerticalAlignment="Center"
                                 Visibility="Collapsed">
-                        <Ellipse x:Name="StatusDot"
+                        <!-- The dot alone, for the collapsed capsule: its colour is the one signal that
+                             has to survive collapsing — a failure still turns it red. Expanded, the dot
+                             is the first thing in the translation button instead. -->
+                        <Ellipse x:Name="CollapsedDot"
                                  Width="8" Height="8"
                                  Margin="4,0,8,0"
                                  VerticalAlignment="Center"
+                                 Visibility="Collapsed"
                                  Fill="{DynamicResource AppAccent}"/>
 
                         <!-- Everything between the dot and the two buttons on the right, as one group:
-                             it is what collapsing the capsule takes away (see SetCollapsed). The dot
-                             stays, because its colour is the one signal that has to survive — a failure
-                             still turns it red — and so do the toggle and ✕, so a collapsed session can
-                             be ended without opening it first. -->
+                             it is what collapsing the capsule takes away (see SetCollapsed). The toggle
+                             and ✕ stay, so a collapsed session can be ended without opening it first. -->
                         <StackPanel x:Name="RunDetails"
                                     Orientation="Horizontal"
                                     VerticalAlignment="Center">
 
-                            <!-- The language pair, and the transient messages, share this one slot: only one
-                                 of the two is ever visible. -->
-                            <TextBlock x:Name="RunStatusText"
-                                       VerticalAlignment="Center"
-                                       Margin="0,0,8,0"
-                                       MaxWidth="{StaticResource MessageMaxWidth}"
-                                       TextTrimming="CharacterEllipsis"
-                                       ToolTipOpening="MessageText_ToolTipOpening"
-                                       FontFamily="{DynamicResource AppFont}"
-                                       FontSize="12.5"
-                                       Foreground="{DynamicResource AppTextPrimary}"
-                                       Text="{DynamicResource S.Realtime.Running}"/>
+                            <!-- The translation button: the dot, the service's mark and the pair, one
+                                 press from the panel that changes any of the three. The button's padding
+                                 and the -2 margin put the dot where the bare dot used to be, 4 from the
+                                 edge. Inside it the pair gives way to whatever the session has to say —
+                                 載入模型中…, a failure, a passing message — in the same slot, so the
+                                 dot and the mark never move. The service is always there as its mark,
+                                 so a failure is seen next to the service it is about. -->
+                            <Button x:Name="TranslationBtn"
+                                    Style="{StaticResource RealtimeTranslationButton}"
+                                    Margin="-2,0,2,0"
+                                    Click="TranslationBtn_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse x:Name="StatusDot"
+                                             Width="8" Height="8"
+                                             VerticalAlignment="Center"
+                                             Fill="{DynamicResource AppAccent}"/>
 
-                            <!-- Source and target are not two equal labels: the target is the thing on screen
-                                 from here on, so it keeps the primary colour and the source steps back one
-                                 level to secondary. Not to muted — that brush is #666 on a #2A2A2A bar,
-                                 2.4:1, and this is 12.5px CJK floating over whatever the user is watching.
-                                 Secondary reaches 5.9:1 dark / 6.4:1 light and still reads as subordinate. The
-                                 arrow between them is drawn rather than typed — U+2192 is not in the UI font,
-                                 so it used to fall back to a CJK face, which renders it full-width and
-                                 centred on the em box: too much air on both sides and sitting visibly high
-                                 against 12.5px text. A Path has no fallback to lose and its weight and
-                                 height are ours to set. -->
-                            <!-- Each name is a button that drops its own list (#345), so the user can
-                                 fix a pair they forgot to set without ending the session. The ⌄ is
-                                 the only thing that says so, and it costs the pair two small marks
-                                 rather than turning it into a pair of drop-down boxes. The buttons'
-                                 own padding replaces the spacing the bare labels had — the negative
-                                 left margin puts the first name back where it was — so the capsule
-                                 grows by the two marks and nothing else. -->
-                            <StackPanel x:Name="LangPairPanel"
-                                        Orientation="Horizontal"
-                                        VerticalAlignment="Center"
-                                        Margin="-6,0,2,0"
-                                        Visibility="Collapsed">
-                                <Button x:Name="SourceLangBtn"
-                                        Style="{StaticResource RealtimeSourceLangButton}"
-                                        ToolTip="{DynamicResource S.Realtime.ChangeSourceLanguage}"
-                                        AutomationProperties.Name="{DynamicResource S.Realtime.ChangeSourceLanguage}"
-                                        Click="SourceLangBtn_Click">
-                                    <StackPanel Orientation="Horizontal">
+                                    <Grid Width="14" Height="14" Margin="6,0,7,0" VerticalAlignment="Center">
+                                        <ctl:ProviderMark x:Name="ProviderMarkView" Size="14"/>
+                                    </Grid>
+
+                                    <!-- Source and target are not two equal labels: the target is the thing
+                                         on screen from here on, so it keeps the primary colour and the source
+                                         steps back one level to secondary. Not to muted — that brush is #666
+                                         on a #2A2A2A bar, 2.4:1, and this is 12.5px CJK floating over whatever
+                                         the user is watching. Secondary reaches 5.9:1 dark / 6.4:1 light and
+                                         still reads as subordinate. The arrow between them is drawn rather
+                                         than typed — U+2192 is not in the UI font, so it used to fall back to
+                                         a CJK face, which renders it full-width and centred on the em box. -->
+                                    <StackPanel x:Name="PairText" Orientation="Horizontal" VerticalAlignment="Center">
                                         <TextBlock x:Name="SourceLangText"
+                                                   Style="{StaticResource RealtimeSourceLangText}"
                                                    VerticalAlignment="Center"
                                                    FontFamily="{DynamicResource AppFont}"
-                                                   FontSize="12.5"
-                                                   Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
-                                        <Path Style="{StaticResource RealtimeLangChevron}"/>
-                                    </StackPanel>
-                                </Button>
+                                                   FontSize="12.5"/>
 
-                                <!-- Half-pixel coordinates so the 1px stroke lands on a pixel row rather than
-                                     straddling two. Bottom margin of 1 lifts it off the text box's centre and
-                                     onto the CJK glyphs' optical centre, which sits above it. -->
-                                <!-- Secondary dimmed, rather than the muted brush it wants to be: muted is the
-                                     same #666 the source label just left for being unreadable here, and an
-                                     arrow nobody can see is not restraint, it is a missing arrow. 0.7 lands
-                                     it at 3.7:1 dark / 3.3:1 light — over the 3:1 a 1px non-text stroke
-                                     needs, still a step below the label it separates. -->
-                                <Path VerticalAlignment="Center"
-                                      Margin="1.5,0,1.5,1"
-                                      Width="10.6" Height="9"
-                                      Stretch="None"
-                                      Stroke="{DynamicResource AppTextSecondary}"
-                                      Opacity="0.7"
-                                      StrokeThickness="1"
-                                      StrokeStartLineCap="Round"
-                                      StrokeEndLineCap="Round"
-                                      StrokeLineJoin="Round"
-                                      Data="M0,4.5 H9.1 M6.8,2.6 L9.6,4.5 L6.8,6.4"/>
+                                        <!-- Half-pixel coordinates so the 1px stroke lands on a pixel row
+                                             rather than straddling two; the bottom margin of 1 lifts it onto
+                                             the CJK glyphs' optical centre. Secondary dimmed to 0.7: 3.7:1
+                                             dark / 3.3:1 light, over the 3:1 a 1px stroke needs. -->
+                                        <Path VerticalAlignment="Center"
+                                              Margin="5,0,5,1"
+                                              Width="10.6" Height="9"
+                                              Stretch="None"
+                                              Stroke="{DynamicResource AppTextSecondary}"
+                                              Opacity="0.7"
+                                              StrokeThickness="1"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"
+                                              StrokeLineJoin="Round"
+                                              Data="M0,4.5 H9.1 M6.8,2.6 L9.6,4.5 L6.8,6.4"/>
 
-                                <Button x:Name="TargetLangBtn"
-                                        Style="{StaticResource RealtimeLangButton}"
-                                        ToolTip="{DynamicResource S.Realtime.ChangeTargetLanguage}"
-                                        AutomationProperties.Name="{DynamicResource S.Realtime.ChangeTargetLanguage}"
-                                        Click="TargetLangBtn_Click">
-                                    <StackPanel Orientation="Horizontal">
                                         <TextBlock x:Name="TargetLangText"
                                                    VerticalAlignment="Center"
                                                    FontFamily="{DynamicResource AppFont}"
                                                    FontSize="12.5"
-                                                   Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
-                                        <Path Style="{StaticResource RealtimeLangChevron}"/>
+                                                   Foreground="{DynamicResource AppTextPrimary}"/>
                                     </StackPanel>
-                                </Button>
-                            </StackPanel>
+
+                                    <!-- What stands in for the pair: capped, so a service's own error
+                                         text cannot carry the buttons off the screen. Cut with …, the
+                                         whole sentence is in the button's label card. -->
+                                    <TextBlock x:Name="RunStatusText"
+                                               VerticalAlignment="Center"
+                                               MaxWidth="{StaticResource MessageMaxWidth}"
+                                               TextTrimming="CharacterEllipsis"
+                                               Visibility="Collapsed"
+                                               FontFamily="{DynamicResource AppFont}"
+                                               FontSize="12.5"
+                                               Foreground="{DynamicResource AppTextPrimary}"
+                                               Text="{DynamicResource S.Realtime.Running}"/>
+
+                                    <Path Style="{StaticResource RealtimeLangChevron}" Margin="5,0,0,0"/>
+                                </StackPanel>
+                            </Button>
+
+                            <!-- 已暫停, beside the button rather than in it: the pair stays in the button,
+                                 because a paused session is where someone who noticed the wrong
+                                 service or language is most likely to stop and fix it. -->
+                            <TextBlock x:Name="PausedText"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,8,0"
+                                       Visibility="Collapsed"
+                                       FontFamily="{DynamicResource AppFont}"
+                                       FontSize="12.5"
+                                       Foreground="{DynamicResource AppTextSecondary}"
+                                       Text="{DynamicResource S.Realtime.Paused}"/>
 
                             <!-- The order, left to right: 截圖翻譯; 隱藏譯文 and 原文對照; 暫停; 顯示外觀 and 模式;
                                  編輯; then the collapse toggle and ✕ after the rule. 截圖翻譯 is leftmost because

@@ -833,7 +833,7 @@ public partial class RealtimeEditWindow : Window
     /// <remarks>
     /// <para>Drawn here because this layer never takes activation: a WPF popup is a window of its
     /// own, and one owned by a window that cannot be active has no keyboard and, where the
-    /// foreground is refused, closes the moment it opens (#358, see RealtimeLanguageMenu). A list
+    /// foreground is refused, closes the moment it opens (#358, see RealtimeTranslationPanel). A list
     /// on the canvas needs neither — it is just more of the layer.</para>
     ///
     /// <para>A catcher covers the whole canvas under it while it is open. A press anywhere off the

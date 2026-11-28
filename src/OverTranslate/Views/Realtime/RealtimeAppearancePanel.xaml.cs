@@ -29,7 +29,7 @@ namespace OverTranslate.Views.Realtime;
 /// redraws its overlays with it. A colour or an opacity is only a change once it is let go — see
 /// <see cref="ColorPicker"/> — because each one rebuilds every overlay on the screen.</para>
 ///
-/// <para>A window of its own, like the language lists, and for the same reason: the capsule never
+/// <para>A window of its own, like the translation panel, and for the same reason: the capsule never
 /// takes activation, and a Popup inside it would get no keyboard. Unlike the lists this one does not
 /// take the foreground when it opens either — everything on it is worked with the mouse, and pulling
 /// the focus off a full-screen game to show it could minimise the game. Only a click in one of the
@@ -41,7 +41,7 @@ namespace OverTranslate.Views.Realtime;
 /// it — see RealtimeControlWindow.</para>
 ///
 /// <para>Nothing about the session's rules for its own windows is special-cased, for the reason the
-/// language list gives: a visible, topmost, unowned window of this process is left out of every
+/// translation panel gives: a visible, topmost, unowned window of this process is left out of every
 /// frame and raised over the overlays by the session's once-a-second re-assert.</para>
 /// </remarks>
 internal partial class RealtimeAppearancePanel : Window
@@ -394,7 +394,7 @@ internal partial class RealtimeAppearancePanel : Window
         // The activation that hands this window the keyboard also puts WPF's focus back where the
         // window last had it — nowhere — after the press has already given it to the box, so the box
         // showed a caret and took no keys. Given again once the handoff has settled; the same story
-        // RealtimeLanguageMenu.FocusWhenReady tells of its search box.
+        // RealtimeTranslationPanel.FocusWhenReady tells of its search box.
         FocusWhenReady(box, attemptsLeft: 8);
     }
 
@@ -482,7 +482,7 @@ internal partial class RealtimeAppearancePanel : Window
     // ── Foreground ───────────────────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Makes this the window the keyboard talks to; see RealtimeLanguageMenu.TakeForeground for why
+    /// Makes this the window the keyboard talks to; see RealtimeTranslationPanel for why
     /// the foreground thread's input queue is shared for the call.
     /// </summary>
     /// <remarks>

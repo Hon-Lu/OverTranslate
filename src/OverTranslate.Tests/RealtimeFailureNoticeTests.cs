@@ -4,79 +4,90 @@ using Xunit;
 namespace OverTranslate.Tests;
 
 /// <summary>
-/// The retried failure on the running capsule (#345): it covers the language pair until it clears,
-/// unless clicked away — and clicked away, only for as long as it is the same failure.
+/// The retried failure on the running capsule: it stands in the language pair's place in the
+/// translation button until it clears. Opening the translation panel is not a way to put it away —
+/// the panel is where the fix is picked, and the restart that follows is what clears it.
 /// </summary>
 public class RealtimeFailureNoticeTests
 {
     private const string Refused = "Translation failed: unsupported language pair";
 
     [Fact]
-    public void AFailure_TakesThePairsPlace()
+    public void AFailure_IsKept_UntilItClears()
     {
         var notice = new RealtimeFailureNotice();
 
         Assert.True(notice.Set(Refused));
-        Assert.True(notice.StandsInForPair);
-    }
-
-    [Fact]
-    public void ClickedAway_ThePairComesBack_ButTheFailureIsStillKnown()
-    {
-        var notice = new RealtimeFailureNotice();
-        notice.Set(Refused);
-
-        Assert.True(notice.Dismiss());
-        Assert.False(notice.StandsInForPair);
         Assert.Equal(Refused, notice.Message);
+
+        Assert.True(notice.Set(null));
+        Assert.Null(notice.Message);
     }
 
-    // The session reports a failure once however many retries run into it; each retry that fails
-    // the same way must not bring back what the user has just clicked away.
+    // The session reports a failure once however many retries run into it.
     [Fact]
-    public void TheSameFailureAgain_StaysAway()
+    public void TheSameFailureAgain_IsNothingNew()
     {
         var notice = new RealtimeFailureNotice();
         notice.Set(Refused);
-        notice.Dismiss();
 
         Assert.False(notice.Set(Refused));
-        Assert.False(notice.StandsInForPair);
     }
 
     [Fact]
-    public void ADifferentFailure_ShowsAgain()
+    public void ADifferentFailure_IsNews()
     {
         var notice = new RealtimeFailureNotice();
         notice.Set(Refused);
-        notice.Dismiss();
 
         Assert.True(notice.Set("Translation failed: quota exceeded"));
-        Assert.True(notice.StandsInForPair);
-    }
-
-    // Changing the pair restarts the session, which clears its failures: if the new pair is refused
-    // too, that is the answer to what the user just did, and it has to be seen.
-    [Fact]
-    public void TheSameFailure_AfterItHadCleared_ShowsAgain()
-    {
-        var notice = new RealtimeFailureNotice();
-        notice.Set(Refused);
-        notice.Dismiss();
-
-        notice.Set(null);
-        notice.Set(Refused);
-
-        Assert.True(notice.StandsInForPair);
     }
 
     [Fact]
-    public void NothingFailing_HasNothingToDismiss()
-    {
-        var notice = new RealtimeFailureNotice();
+    public void NothingFailing_IsNothingNew() =>
+        Assert.False(new RealtimeFailureNotice().Set(null));
 
-        Assert.False(notice.Dismiss());
-        Assert.False(notice.IsDismissed);
-        Assert.False(notice.Set(null));
+    // ── What the button shows ────────────────────────────────────────────────
+
+    // A failure keeps the pair's place whatever else holds — the panel being open is not an input at
+    // all — until it clears; then the button goes back to what the session is doing.
+    [Theory]
+    [InlineData(false, false, true, RealtimeButtonBody.Message)]
+    [InlineData(true, false, true, RealtimeButtonBody.Message)]
+    [InlineData(false, true, true, RealtimeButtonBody.Message)]
+    [InlineData(false, false, false, RealtimeButtonBody.Pair)]
+    public void AMessage_StandsInForThePair_UntilItGoes(bool paused, bool loading, bool message, RealtimeButtonBody expected) =>
+        Assert.Equal(expected, RealtimeTranslationButtonRule.For(paused, loading, message, hasLanguages: true));
+
+    // Paused, the pair stays in the button — 已暫停 is beside it — so the wrong service or language
+    // can be seen and fixed before 繼續.
+    [Fact]
+    public void Paused_ShowsThePair_EvenWhileAModelLoads() =>
+        Assert.Equal(RealtimeButtonBody.Pair, RealtimeTranslationButtonRule.For(paused: true, loadingModels: true, messageShowing: false, hasLanguages: true));
+
+    [Fact]
+    public void LoadingAModel_TakesThePairsPlace() =>
+        Assert.Equal(RealtimeButtonBody.LoadingModels, RealtimeTranslationButtonRule.For(false, true, false, true));
+
+    [Fact]
+    public void BeforeThePairIsNamed_TheButtonSaysItIsRunning() =>
+        Assert.Equal(RealtimeButtonBody.Running, RealtimeTranslationButtonRule.For(false, false, false, false));
+
+    // ── The label card ───────────────────────────────────────────────────────
+
+    [Fact]
+    public void AMessageCutShort_IsWholeInTheLabelCard()
+    {
+        var whole = new string('錯', 80);
+
+        Assert.Equal(whole, RealtimeTranslationButtonRule.Title(whole, "Google 翻譯 (標準)", "日文", "繁體中文"));
     }
+
+    [Fact]
+    public void Otherwise_TheLabelCardNamesTheServiceAndThePair() =>
+        Assert.Equal("DeepL · 日文 → 繁體中文", RealtimeTranslationButtonRule.Title(null, "DeepL", "日文", "繁體中文"));
+
+    [Fact]
+    public void WithNoPairYet_TheSummaryIsTheService() =>
+        Assert.Equal("DeepL", RealtimeTranslationButtonRule.Summary("DeepL", "", ""));
 }

@@ -10,8 +10,9 @@ using Xunit;
 namespace OverTranslate.Tests;
 
 /// <summary>
-/// Changing the language pair from the running capsule (#345): what the two lists offer, how the
-/// target list is searched, and what the session does with a new pair running and paused.
+/// Changing the language pair from the running capsule (#345), now from the translation panel: what
+/// the two language columns offer, how they are searched, and what the session does with a new pair
+/// running and paused.
 /// </summary>
 public class RealtimeLanguageSwitchTests
 {
@@ -20,7 +21,7 @@ public class RealtimeLanguageSwitchTests
     [Fact]
     public void SourceMenu_ListsTheReadableLanguages_WithoutAutomatic()
     {
-        var codes = RealtimeLanguageMenuItems.For(RealtimeLanguageMenuKind.Source, "EN").Select(e => e.Code);
+        var codes = RealtimeTranslationPanelItems.For(RealtimeLanguageKind.Source, "EN").Select(e => e.Code);
 
         Assert.Equal(["EN", "JA", "KO", "ZH-HANT", "ZH", "DE", "ES", "FR", "IT", "PT", "RU", "UK"], codes);
     }
@@ -30,13 +31,13 @@ public class RealtimeLanguageSwitchTests
     {
         var page = LanguageData.OcrSourceLanguages.Where(l => !LanguageData.IsAutomaticSource(l.Code));
 
-        Assert.Equal(page.Select(l => l.Code), RealtimeLanguageMenuItems.SourceLanguages.Select(l => l.Code));
+        Assert.Equal(page.Select(l => l.Code), RealtimeTranslationPanelItems.SourceLanguages.Select(l => l.Code));
     }
 
     [Fact]
     public void TargetMenu_ListsEveryTargetLanguage_InThePickersOrder()
     {
-        var codes = RealtimeLanguageMenuItems.For(RealtimeLanguageMenuKind.Target, "ZH-HANT").Select(e => e.Code);
+        var codes = RealtimeTranslationPanelItems.For(RealtimeLanguageKind.Target, "ZH-HANT").Select(e => e.Code);
 
         Assert.Equal(LanguageData.TargetLanguages.Select(l => l.Code), codes);
     }
@@ -47,15 +48,15 @@ public class RealtimeLanguageSwitchTests
     [InlineData(false, "EN-US", "EN-US")]
     public void TheLanguageInUse_IsMarked_AndOnlyIt(bool source, string selected, string expected)
     {
-        var kind = source ? RealtimeLanguageMenuKind.Source : RealtimeLanguageMenuKind.Target;
-        var marked = RealtimeLanguageMenuItems.For(kind, selected).Where(e => e.IsSelected).Select(e => e.Code);
+        var kind = source ? RealtimeLanguageKind.Source : RealtimeLanguageKind.Target;
+        var marked = RealtimeTranslationPanelItems.For(kind, selected).Where(e => e.IsSelected).Select(e => e.Code);
 
         Assert.Equal([expected], marked);
     }
 
     [Fact]
     public void ACodeNotInTheList_MarksNothing() =>
-        Assert.DoesNotContain(RealtimeLanguageMenuItems.For(RealtimeLanguageMenuKind.Source, "AUTO"), e => e.IsSelected);
+        Assert.DoesNotContain(RealtimeTranslationPanelItems.For(RealtimeLanguageKind.Source, "AUTO"), e => e.IsSelected);
 
     // The search is the capture toolbar's: code, local name and English name all find a language.
     [Theory]
@@ -65,8 +66,8 @@ public class RealtimeLanguageSwitchTests
     [InlineData("RUS")]
     public void TargetSearch_FindsALanguageByCodeOrEitherName(string query)
     {
-        var found = RealtimeLanguageMenuItems.For(RealtimeLanguageMenuKind.Target, "ZH-HANT")
-            .Where(e => RealtimeLanguageMenuItems.Matches(e, query))
+        var found = RealtimeTranslationPanelItems.For(RealtimeLanguageKind.Target, "ZH-HANT")
+            .Where(e => RealtimeTranslationPanelItems.Matches(e, query))
             .Select(e => e.Code);
 
         Assert.Contains("RU", found);
@@ -76,43 +77,17 @@ public class RealtimeLanguageSwitchTests
     public void TargetSearch_AgreesWithTheToolbarsPicker()
     {
         foreach (var query in new[] { "", "ch", "中文", "trad chinese", "pt", "qq" })
-            foreach (var entry in RealtimeLanguageMenuItems.For(RealtimeLanguageMenuKind.Target, "EN-US"))
+            foreach (var entry in RealtimeTranslationPanelItems.For(RealtimeLanguageKind.Target, "EN-US"))
                 Assert.Equal(
                     Controls.ComboBoxSearch.Matches(entry.Language, query),
-                    RealtimeLanguageMenuItems.Matches(entry, query));
+                    RealtimeTranslationPanelItems.Matches(entry, query));
     }
 
     [Fact]
     public void TargetSearch_WithNothingThere_LeavesNoRow() =>
         Assert.DoesNotContain(
-            RealtimeLanguageMenuItems.For(RealtimeLanguageMenuKind.Target, "EN-US"),
-            e => RealtimeLanguageMenuItems.Matches(e, "zzz"));
-
-    // ── Where the list opens ─────────────────────────────────────────────────
-
-    private static readonly Rectangle Screen = new(0, 0, 1920, 1080);
-
-    // Border 1 + padding 6 + row padding 10 on the menu, less the button's own padding 6.
-    [Fact]
-    public void TheNamesInTheList_StartWhereTheNameOnTheButtonDoes() =>
-        Assert.Equal(11, RealtimeLanguageMenu.TextAlignmentOffset);
-
-    [Fact]
-    public void TheMenu_SitsLeftOfTheButton_ByTheTextOffset() =>
-        Assert.Equal(400 - 17, RealtimeLanguageMenu.ChromeLeft(anchorLeft: 400, offset: 17, chromeWidth: 330, Screen));
-
-    [Fact]
-    public void AButtonNearTheLeftEdge_PutsTheMenuFlushWithIt() =>
-        Assert.Equal(0, RealtimeLanguageMenu.ChromeLeft(anchorLeft: 8, offset: 17, chromeWidth: 330, Screen));
-
-    [Fact]
-    public void AButtonNearTheRightEdge_PullsTheMenuBackOn() =>
-        Assert.Equal(1920 - 330, RealtimeLanguageMenu.ChromeLeft(anchorLeft: 1800, offset: 17, chromeWidth: 330, Screen));
-
-    [Fact]
-    public void ASecondScreenOnTheLeft_IsHeldToItsOwnEdge() =>
-        Assert.Equal(-1920, RealtimeLanguageMenu.ChromeLeft(
-            anchorLeft: -1915, offset: 17, chromeWidth: 330, new Rectangle(-1920, 0, 1920, 1080)));
+            RealtimeTranslationPanelItems.For(RealtimeLanguageKind.Target, "EN-US"),
+            e => RealtimeTranslationPanelItems.Matches(e, "zzz"));
 
     // ── The session ──────────────────────────────────────────────────────────
 
