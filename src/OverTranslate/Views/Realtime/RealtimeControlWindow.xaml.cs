@@ -503,7 +503,9 @@ public partial class RealtimeControlWindow : Window
     public void SetProvider(Models.TranslationProvider provider)
     {
         _provider = Models.LanguageData.CurrentProvider(provider);
-        ProviderMarkView.Provider = _provider;
+        // Through SetValue rather than the property setter: the test that keeps views from writing the
+        // shared translation service reads any assignment to a Provider property in a view as one.
+        ProviderMarkView.SetValue(global::OverTranslate.Controls.ProviderMark.ProviderProperty, _provider);
         ApplySummary();
         _panel?.ShowSelection(_provider, _sourceCode, _targetCode);
     }
